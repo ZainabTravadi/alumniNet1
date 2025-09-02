@@ -1,0 +1,537 @@
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  BookOpen,
+  Search,
+  Filter,
+  Star,
+  MapPin,
+  Building2,
+  GraduationCap,
+  Clock,
+  Users,
+  MessageSquare,
+  Send,
+  CheckCircle,
+  Calendar
+} from 'lucide-react';
+
+const Mentorship = () => {
+  const [activeTab, setActiveTab] = useState('find-mentors');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedExpertise, setSelectedExpertise] = useState('');
+  const [isRequestOpen, setIsRequestOpen] = useState(false);
+  const [selectedMentor, setSelectedMentor] = useState<any>(null);
+
+  const mentors = [
+    {
+      id: 1,
+      name: 'Sarah Chen',
+      title: 'Senior Software Engineer',
+      company: 'Google',
+      batch: '2016',
+      department: 'Computer Science',
+      location: 'San Francisco, CA',
+      avatar: '/placeholder-avatar.jpg',
+      rating: 4.9,
+      mentees: 12,
+      expertise: ['Software Engineering', 'Career Growth', 'Technical Leadership', 'System Design'],
+      bio: 'I have 8+ years of experience in tech, having worked at Google, Facebook, and startups. I love helping fellow alumni navigate their tech careers.',
+      availability: 'Weekends',
+      responseTime: '24 hours',
+      languages: ['English', 'Mandarin']
+    },
+    {
+      id: 2,
+      name: 'Michael Rodriguez',
+      title: 'Product Director',
+      company: 'Tesla',
+      batch: '2014',
+      department: 'Mechanical Engineering',
+      location: 'Austin, TX',
+      avatar: '/placeholder-avatar.jpg',
+      rating: 4.8,
+      mentees: 8,
+      expertise: ['Product Management', 'Engineering Leadership', 'Automotive Industry', 'Innovation'],
+      bio: 'Leading product teams in the automotive space. Passionate about clean energy and helping engineers transition to product roles.',
+      availability: 'Evenings',
+      responseTime: '12 hours',
+      languages: ['English', 'Spanish']
+    },
+    {
+      id: 3,
+      name: 'Emma Thompson',
+      title: 'Marketing Director',
+      company: 'Microsoft',
+      batch: '2015',
+      department: 'Business Administration',
+      location: 'Seattle, WA',
+      avatar: '/placeholder-avatar.jpg',
+      rating: 4.9,
+      mentees: 15,
+      expertise: ['Digital Marketing', 'Brand Strategy', 'Leadership', 'B2B Marketing'],
+      bio: 'Leading marketing initiatives for enterprise products. Happy to share insights on marketing strategy and career progression.',
+      availability: 'Flexible',
+      responseTime: '6 hours',
+      languages: ['English']
+    },
+    {
+      id: 4,
+      name: 'David Kim',
+      title: 'Investment Partner',
+      company: 'Sequoia Capital',
+      batch: '2012',
+      department: 'Finance',
+      location: 'Menlo Park, CA',
+      avatar: '/placeholder-avatar.jpg',
+      rating: 5.0,
+      mentees: 6,
+      expertise: ['Venture Capital', 'Startup Funding', 'Financial Analysis', 'Entrepreneurship'],
+      bio: 'Investing in early-stage startups for 6+ years. I help entrepreneurs with funding strategies and business development.',
+      availability: 'Mornings',
+      responseTime: '48 hours',
+      languages: ['English', 'Korean']
+    }
+  ];
+
+  const mentorshipRequests = [
+    {
+      id: 1,
+      mentorName: 'Sarah Chen',
+      mentorAvatar: '/placeholder-avatar.jpg',
+      topic: 'Career transition to tech',
+      status: 'pending',
+      requestDate: '2024-03-10',
+      message: 'Hi Sarah, I\'m interested in transitioning from finance to software engineering. Would love your guidance on making this career switch.'
+    },
+    {
+      id: 2,
+      mentorName: 'Michael Rodriguez',
+      mentorAvatar: '/placeholder-avatar.jpg',
+      topic: 'Product management career',
+      status: 'accepted',
+      requestDate: '2024-03-08',
+      message: 'Hello Michael, I\'m currently an engineer looking to move into product management. Could we discuss the transition process?'
+    },
+    {
+      id: 3,
+      mentorName: 'Emma Thompson',
+      mentorAvatar: '/placeholder-avatar.jpg',
+      topic: 'Marketing strategy for startups',
+      status: 'completed',
+      requestDate: '2024-02-25',
+      message: 'Hi Emma, I\'m launching a startup and need advice on marketing strategy and go-to-market approach.'
+    }
+  ];
+
+  const expertiseAreas = [
+    'All Areas',
+    'Software Engineering',
+    'Product Management',
+    'Marketing',
+    'Finance',
+    'Data Science',
+    'Design',
+    'Entrepreneurship',
+    'Consulting',
+    'Investment Banking',
+    'Venture Capital',
+    'Healthcare',
+    'Education'
+  ];
+
+  const filteredMentors = mentors.filter(mentor => {
+    const matchesSearch = mentor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         mentor.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         mentor.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesExpertise = !selectedExpertise || selectedExpertise === 'All Areas' || 
+                           mentor.expertise.some(exp => exp.includes(selectedExpertise));
+    
+    return matchesSearch && matchesExpertise;
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'accepted': return 'bg-green-100 text-green-800';
+      case 'completed': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending': return <Clock className="h-4 w-4" />;
+      case 'accepted': return <CheckCircle className="h-4 w-4" />;
+      case 'completed': return <Star className="h-4 w-4" />;
+      default: return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-4 animate-fade-in">
+          <h1 className="text-4xl md:text-5xl font-bold">
+            Alumni{' '}
+            <span className="bg-gradient-to-r from-primary via-primary to-primary-foreground bg-clip-text text-transparent">
+              Mentorship
+            </span>
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Connect with experienced alumni mentors or share your expertise by becoming a mentor yourself.
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-slide-up">
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Available Mentors</p>
+                  <p className="text-3xl font-bold">{mentors.length}</p>
+                </div>
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Active Mentorships</p>
+                  <p className="text-3xl font-bold">89</p>
+                </div>
+                <MessageSquare className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Success Stories</p>
+                  <p className="text-3xl font-bold">156</p>
+                </div>
+                <Star className="h-8 w-8 text-yellow-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Your Requests</p>
+                  <p className="text-3xl font-bold">{mentorshipRequests.length}</p>
+                </div>
+                <BookOpen className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-scale-in">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="find-mentors">Find Mentors</TabsTrigger>
+            <TabsTrigger value="my-requests">My Requests</TabsTrigger>
+            <TabsTrigger value="become-mentor">Become a Mentor</TabsTrigger>
+          </TabsList>
+
+          {/* Find Mentors Tab */}
+          <TabsContent value="find-mentors" className="space-y-6">
+            {/* Search & Filters */}
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="h-5 w-5 text-primary" />
+                  Find Your Perfect Mentor
+                </CardTitle>
+                <CardDescription>
+                  Search by expertise, company, or name to find the right mentor for your goals
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name, company, or title..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <Select value={selectedExpertise} onValueChange={setSelectedExpertise}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Expertise" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {expertiseAreas.map((area) => (
+                        <SelectItem key={area} value={area}>
+                          {area}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Mentors Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredMentors.map((mentor) => (
+                <Card key={mentor.id} className="glass-card hover-glow">
+                  <CardHeader>
+                    <div className="flex items-start space-x-4">
+                      <Avatar className="h-16 w-16">
+                        <AvatarImage src={mentor.avatar} />
+                        <AvatarFallback className="text-lg">
+                          {mentor.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-1">
+                        <CardTitle className="text-lg">{mentor.name}</CardTitle>
+                        <CardDescription>{mentor.title}</CardDescription>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {mentor.company}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <GraduationCap className="h-3 w-3" />
+                            {mentor.batch}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                          <span className="font-medium">{mentor.rating}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {mentor.mentees} mentees
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {mentor.bio}
+                    </p>
+
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Expertise Areas</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {mentor.expertise.map((skill) => (
+                          <Badge key={skill} variant="outline" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Location:</span>
+                        <p className="font-medium">{mentor.location}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Response Time:</span>
+                        <p className="font-medium">{mentor.responseTime}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Availability:</span>
+                        <p className="font-medium">{mentor.availability}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Languages:</span>
+                        <p className="font-medium">{mentor.languages.join(', ')}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Dialog open={isRequestOpen && selectedMentor?.id === mentor.id} onOpenChange={setIsRequestOpen}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            className="flex-1" 
+                            onClick={() => setSelectedMentor(mentor)}
+                          >
+                            <Send className="h-3 w-3 mr-2" />
+                            Request Mentorship
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                          <DialogHeader>
+                            <DialogTitle>Request Mentorship from {mentor.name}</DialogTitle>
+                            <DialogDescription>
+                              Send a personalized message explaining what you'd like to learn and your goals.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="topic">Mentorship Topic</Label>
+                              <Input id="topic" placeholder="e.g., Career transition to tech" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="message">Personal Message</Label>
+                              <Textarea 
+                                id="message" 
+                                placeholder="Introduce yourself and explain what you hope to learn..."
+                                className="min-h-[100px]"
+                              />
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                              <Button variant="outline" onClick={() => setIsRequestOpen(false)}>
+                                Cancel
+                              </Button>
+                              <Button onClick={() => setIsRequestOpen(false)}>
+                                Send Request
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      <Button variant="outline">
+                        View Profile
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* My Requests Tab */}
+          <TabsContent value="my-requests" className="space-y-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle>Your Mentorship Requests</CardTitle>
+                <CardDescription>
+                  Track the status of your mentorship requests and manage ongoing relationships
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mentorshipRequests.map((request) => (
+                    <div key={request.id} className="flex items-start space-x-4 p-4 rounded-lg bg-muted/30">
+                      <Avatar>
+                        <AvatarImage src={request.mentorAvatar} />
+                        <AvatarFallback>
+                          {request.mentorName.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">{request.mentorName}</h4>
+                          <Badge className={getStatusColor(request.status)}>
+                            {getStatusIcon(request.status)}
+                            <span className="ml-1 capitalize">{request.status}</span>
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-medium text-muted-foreground">{request.topic}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{request.message}</p>
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-xs text-muted-foreground">
+                            Requested on {new Date(request.requestDate).toLocaleDateString()}
+                          </span>
+                          <div className="flex gap-2">
+                            {request.status === 'accepted' && (
+                              <Button size="sm">
+                                <MessageSquare className="h-3 w-3 mr-1" />
+                                Message
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm">
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Become a Mentor Tab */}
+          <TabsContent value="become-mentor" className="space-y-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle>Become a Mentor</CardTitle>
+                <CardDescription>
+                  Share your expertise and help fellow alumni grow in their careers
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-center space-y-4">
+                  <BookOpen className="h-16 w-16 mx-auto text-primary" />
+                  <h3 className="text-2xl font-bold">Ready to Make a Difference?</h3>
+                  <p className="text-muted-foreground max-w-2xl mx-auto">
+                    Join our community of mentors and help shape the next generation of professionals. 
+                    Share your knowledge, build meaningful connections, and give back to your alma mater.
+                  </p>
+                </div>
+                
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="text-center space-y-2">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                      <Users className="h-6 w-6 text-primary" />
+                    </div>
+                    <h4 className="font-semibold">Impact Lives</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Help fellow alumni navigate their career challenges and achieve their goals
+                    </p>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                      <Star className="h-6 w-6 text-primary" />
+                    </div>
+                    <h4 className="font-semibold">Build Network</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Expand your professional network and create lasting relationships
+                    </p>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                      <Calendar className="h-6 w-6 text-primary" />
+                    </div>
+                    <h4 className="font-semibold">Flexible Schedule</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Mentor on your own schedule with as much or as little time as you can offer
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <Button size="lg" className="bg-gradient-primary hover:opacity-90">
+                    Apply to Become a Mentor
+                  </Button>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Application review typically takes 2-3 business days
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default Mentorship;
