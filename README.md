@@ -1,11 +1,11 @@
+---
 
-````markdown
 # 🎓 AlumniNet
 
 AlumniNet is a full-stack web application with two separate parts:
 
-- **Frontend** → main user interface (React + Vite)  
-- **RecommendationSystem** → recommendation engine (React + Vite)
+* **Frontend** → main user interface (React + Vite)
+* **RecommendationSystem** → recommendation engine (React + Vite)
 
 Both projects need to be installed and run separately.
 
@@ -18,7 +18,7 @@ Both projects need to be installed and run separately.
 ```powershell
 git clone https://github.com/VikashRaj-cmd/alumniNet.git
 cd alumniNet
-````
+```
 
 ---
 
@@ -70,5 +70,3 @@ This will start the recommendation system on:
 * Do **not** swap or omit ports, or the apps may fail to run correctly.
 
 ---
-
-
