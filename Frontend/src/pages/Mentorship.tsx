@@ -31,6 +31,7 @@ const Mentorship = () => {
   const [selectedExpertise, setSelectedExpertise] = useState('');
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [selectedMentor, setSelectedMentor] = useState<any>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const mentors = [
     {
@@ -405,7 +406,10 @@ const Mentorship = () => {
                           </div>
                         </DialogContent>
                       </Dialog>
-                      <Button variant="outline">
+                      <Button variant="outline" onClick={() => {
+                        setSelectedMentor(mentor);
+                        setIsProfileOpen(true);
+                      }}>
                         View Profile
                       </Button>
                     </div>
@@ -529,6 +533,96 @@ const Mentorship = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {selectedMentor && (
+        <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+          <DialogContent className="sm:max-w-2xl w-full">
+            <DialogHeader>
+              <div className="flex items-start space-x-4">
+                <Avatar className="h-24 w-24 border-2 border-primary">
+                  <AvatarImage src={selectedMentor.avatar} />
+                  <AvatarFallback className="text-3xl">
+                    {selectedMentor.name.split(' ').map((n: string) => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-1">
+                  <DialogTitle className="text-2xl font-bold">{selectedMentor.name}</DialogTitle>
+                  <DialogDescription className="text-md">
+                    {selectedMentor.title} at <span className="font-semibold text-primary">{selectedMentor.company}</span>
+                  </DialogDescription>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2">
+                    <span className="flex items-center gap-1.5">
+                      <GraduationCap className="h-4 w-4" />
+                      Batch of {selectedMentor.batch}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4" />
+                      {selectedMentor.location}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </DialogHeader>
+            <div className="py-4 space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Bio</h3>
+                <p className="text-muted-foreground">{selectedMentor.bio}</p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Expertise</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedMentor.expertise.map((skill: string) => (
+                    <Badge key={skill} variant="secondary">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                  <h4 className="font-semibold">Department</h4>
+                  <p className="text-muted-foreground">{selectedMentor.department}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Rating</h4>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-5 w-5 text-yellow-500 fill-current" />
+                    <span className="font-medium text-muted-foreground">{selectedMentor.rating}</span>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Mentees</h4>
+                  <p className="text-muted-foreground">{selectedMentor.mentees}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Availability</h4>
+                  <p className="text-muted-foreground">{selectedMentor.availability}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Response Time</h4>
+                  <p className="text-muted-foreground">{selectedMentor.responseTime}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Languages</h4>
+                  <p className="text-muted-foreground">{selectedMentor.languages.join(', ')}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsProfileOpen(false)}>Close</Button>
+                <Button onClick={() => {
+                  setIsProfileOpen(false);
+                  setIsRequestOpen(true);
+                }}>
+                  <Send className="h-4 w-4 mr-2" />
+                  Request Mentorship
+                </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        )}
       </div>
     </div>
   );

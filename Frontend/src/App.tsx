@@ -11,8 +11,12 @@ import Forums from "./pages/Forums";
 import Mentorship from "./pages/Mentorship";
 import Fundraising from "./pages/Fundraising";
 import Profile from "./pages/Profile";
+import UpdateProfile from "./pages/UpdateProfile";
 import NotificationCenter from "./components/notifications/NotificationCenter";
 import NotFound from "./pages/NotFound";
+
+// 🚀 Import your floating rocket
+import FloatingRocket from "./components/ui/FloatingRocket";
 
 const queryClient = new QueryClient();
 
@@ -32,10 +36,14 @@ const App = () => (
             <Route path="/mentorship" element={<Mentorship />} />
             <Route path="/fundraising" element={<Fundraising />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/update-profile" element={<UpdateProfile />} />
             <Route path="/notifications" element={<NotificationCenter />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+
+          {/* 🚀 Floating rocket button, always visible */}
+          <FloatingRocket />
         </div>
       </BrowserRouter>
     </TooltipProvider>

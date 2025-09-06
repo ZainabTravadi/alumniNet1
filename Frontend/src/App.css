@@ -40,3 +40,33 @@
 .read-the-docs {
   color: #888;
 }
+
+.rocket {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  cursor: pointer;
+  z-index: 1000;
+  animation: float 6s infinite ease-in-out;
+}
+
+.rocket-icon {
+  width: 40px !important;   /* force width */
+  height: 40px !important;  /* force height */
+  max-width: 40px !important;
+  max-height: 40px !important;
+  object-fit: contain;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: transform 0.3s ease;
+}
+
+.rocket:hover .rocket-icon {
+  transform: scale(1.1) rotate(8deg);
+}
+
+@keyframes float {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}

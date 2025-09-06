@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,10 +11,17 @@ import {
   ArrowRight,
   MapPin,
   Building2,
-  GraduationCap
+  GraduationCap,
+  Star
 } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const [selectedAlumni, setSelectedAlumni] = useState<any>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
   const stats = [
     { label: 'Total Alumni', value: '2,847', icon: Users, color: 'text-blue-500' },
     { label: 'Upcoming Events', value: '12', icon: Calendar, color: 'text-green-500' },
@@ -23,28 +31,55 @@ const Dashboard = () => {
 
   const recentAlumni = [
     {
+      id: 1,
       name: 'Sarah Chen',
+      title: 'Senior Software Engineer',
+      company: 'Google',
       batch: '2019',
       department: 'Computer Science',
-      company: 'Google',
       location: 'San Francisco',
-      avatar: '/placeholder-avatar.jpg'
+      avatar: '/placeholder-avatar.jpg',
+      rating: 4.9,
+      mentees: 12,
+      expertise: ['Software Engineering', 'Career Growth', 'Technical Leadership', 'System Design'],
+      bio: 'I have 8+ years of experience in tech, having worked at Google, Facebook, and startups. I love helping fellow alumni navigate their tech careers.',
+      availability: 'Weekends',
+      responseTime: '24 hours',
+      languages: ['English', 'Mandarin']
     },
     {
+      id: 2,
       name: 'Michael Rodriguez',
+      title: 'Product Director',
+      company: 'Tesla',
       batch: '2020',
       department: 'Mechanical Eng',
-      company: 'Tesla',
       location: 'Austin',
-      avatar: '/placeholder-avatar.jpg'
+      avatar: '/placeholder-avatar.jpg',
+      rating: 4.8,
+      mentees: 8,
+      expertise: ['Product Management', 'Engineering Leadership', 'Automotive Industry', 'Innovation'],
+      bio: 'Leading product teams in the automotive space. Passionate about clean energy and helping engineers transition to product roles.',
+      availability: 'Evenings',
+      responseTime: '12 hours',
+      languages: ['English', 'Spanish']
     },
     {
+      id: 3,
       name: 'Emma Thompson',
+      title: 'Marketing Director',
+      company: 'Microsoft',
       batch: '2018',
       department: 'Business Admin',
-      company: 'Microsoft',
       location: 'Seattle',
-      avatar: '/placeholder-avatar.jpg'
+      avatar: '/placeholder-avatar.jpg',
+      rating: 4.9,
+      mentees: 15,
+      expertise: ['Digital Marketing', 'Brand Strategy', 'Leadership', 'B2B Marketing'],
+      bio: 'Leading marketing initiatives for enterprise products. Happy to share insights on marketing strategy and career progression.',
+      availability: 'Flexible',
+      responseTime: '6 hours',
+      languages: ['English']
     }
   ];
 
@@ -85,11 +120,11 @@ const Dashboard = () => {
             find mentors, and contribute to your alma mater's future.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button size="lg" className="bg-gradient-primary hover:opacity-90">
+            <Button size="lg" className="bg-gradient-primary hover:opacity-90" onClick={() => navigate("/directory")}> 
               Explore Directory
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button size="lg" variant="outline">
+            <Button size="lg" variant="outline" onClick={() => navigate("/update-profile")}> 
               Update Profile
             </Button>
           </div>
@@ -97,7 +132,7 @@ const Dashboard = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
-          {stats.map((stat, index) => (
+          {stats.map((stat) => (
             <Card key={stat.label} className="glass-card hover-glow">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -126,8 +161,11 @@ const Dashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {recentAlumni.map((alumni, index) => (
-                  <div key={index} className="flex items-center space-x-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                {recentAlumni.map((alumni) => (
+                  <div key={alumni.id} className="flex items-center space-x-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => {
+                    setSelectedAlumni(alumni);
+                    setIsProfileOpen(true);
+                  }}>
                     <Avatar>
                       <AvatarImage src={alumni.avatar} />
                       <AvatarFallback>{alumni.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
@@ -199,6 +237,88 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+      {selectedAlumni && (
+        <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+          <DialogContent className="sm:max-w-2xl w-full">
+            <DialogHeader>
+              <div className="flex items-start space-x-4">
+                <Avatar className="h-24 w-24 border-2 border-primary">
+                  <AvatarImage src={selectedAlumni.avatar} />
+                  <AvatarFallback className="text-3xl">
+                    {selectedAlumni.name.split(' ').map((n: string) => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-1">
+                  <DialogTitle className="text-2xl font-bold">{selectedAlumni.name}</DialogTitle>
+                  <DialogDescription className="text-md">
+                    {selectedAlumni.title} at <span className="font-semibold text-primary">{selectedAlumni.company}</span>
+                  </DialogDescription>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2">
+                    <span className="flex items-center gap-1.5">
+                      <GraduationCap className="h-4 w-4" />
+                      Batch of {selectedAlumni.batch}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4" />
+                      {selectedAlumni.location}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </DialogHeader>
+            <div className="py-4 space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Bio</h3>
+                <p className="text-muted-foreground">{selectedAlumni.bio}</p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Expertise</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedAlumni.expertise.map((skill: string) => (
+                    <Badge key={skill} variant="secondary">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                  <h4 className="font-semibold">Department</h4>
+                  <p className="text-muted-foreground">{selectedAlumni.department}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Rating</h4>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-5 w-5 text-yellow-500 fill-current" />
+                    <span className="font-medium text-muted-foreground">{selectedAlumni.rating}</span>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Mentees</h4>
+                  <p className="text-muted-foreground">{selectedAlumni.mentees}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Availability</h4>
+                  <p className="text-muted-foreground">{selectedAlumni.availability}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Response Time</h4>
+                  <p className="text-muted-foreground">{selectedAlumni.responseTime}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold">Languages</h4>
+                  <p className="text-muted-foreground">{selectedAlumni.languages.join(', ')}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsProfileOpen(false)}>Close</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        )}
     </div>
   );
 };

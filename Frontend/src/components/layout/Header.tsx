@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,9 @@ import { Badge } from '@/components/ui/badge';
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef(null);
   const location = useLocation();
 
   const navigation = [
@@ -38,6 +41,64 @@ const Header = () => {
     { name: 'Mentorship', href: '/mentorship', icon: BookOpen },
     { name: 'Fundraising', href: '/fundraising', icon: DollarSign },
   ];
+
+  // Example alumni data
+  const alumniList = [
+    {
+      name: "Sarah Chen",
+      year: 2019,
+      department: "Computer Science",
+      company: "Google",
+      location: "San Francisco",
+      email: "sarah.chen@gmail.com",
+      bio: "AI enthusiast and mentor.",
+      avatar: "/placeholder-avatar.jpg"
+    },
+    {
+      name: "Michael Rodriguez",
+      year: 2020,
+      department: "Mechanical Eng",
+      company: "Tesla",
+      location: "Austin",
+      email: "michael.r@tesla.com",
+      bio: "EV design specialist.",
+      avatar: "/placeholder-avatar.jpg"
+    },
+    {
+      name: "Priya Patel",
+      year: 2018,
+      department: "Electrical Eng",
+      company: "Apple",
+      location: "Cupertino",
+      email: "priya.patel@apple.com",
+      bio: "Hardware engineer and speaker.",
+      avatar: "/placeholder-avatar.jpg"
+    },
+    {
+      name: "John Doe",
+      year: 2017,
+      department: "Civil Eng",
+      company: "Amazon",
+      location: "Seattle",
+      email: "john.doe@amazon.com",
+      bio: "Infrastructure project manager.",
+      avatar: "/placeholder-avatar.jpg"
+    },
+    {
+      name: "Aisha Khan",
+      year: 2021,
+      department: "Business Admin",
+      company: "Meta",
+      location: "Menlo Park",
+      email: "aisha.khan@meta.com",
+      bio: "Product manager and startup advisor.",
+      avatar: "/placeholder-avatar.jpg"
+    },
+  ];
+
+  const filteredAlumni = search.length > 0
+    ? alumniList.filter(a => a.name.toLowerCase().includes(search.toLowerCase()))
+    : [];
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -81,18 +142,45 @@ const Header = () => {
             <div className="hidden lg:block relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                ref={searchRef}
                 placeholder="Search alumni..."
                 className="pl-10 w-64 bg-muted/50"
+                value={search}
+                onChange={e => {
+                  setSearch(e.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
               />
+              {showDropdown && filteredAlumni.length > 0 && (
+                <div className="absolute left-0 mt-1 w-full bg-background border rounded shadow-lg z-50 max-h-60 overflow-auto">
+                  {filteredAlumni.map((alum, idx) => (
+                    <div key={idx} className="px-4 py-2 hover:bg-accent cursor-pointer flex items-center gap-3">
+                      <img src={alum.avatar} alt={alum.name} className="w-8 h-8 rounded-full object-cover border" />
+                      <div>
+                        <span className="font-medium">{alum.name}</span>
+                        <div className="text-xs text-muted-foreground">
+                          {alum.year} • {alum.department} • {alum.company} • {alum.location}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{alum.email}</div>
+                        <div className="text-xs text-muted-foreground italic">{alum.bio}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Notifications */}
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary">
-                3
-              </Badge>
-            </Button>
+            <Link to="/notifications" className="relative">
+              <Button variant="ghost" size="sm" className="relative">
+                <Bell className="h-5 w-5" />
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary">
+                  3
+                </Badge>
+              </Button>
+            </Link>
 
             {/* Profile Dropdown */}
             <DropdownMenu>
