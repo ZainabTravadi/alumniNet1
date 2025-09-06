@@ -1,6 +1,5 @@
----
 
-````
+````markdown
 # 🎓 AlumniNet
 
 AlumniNet is a full-stack web application with two separate parts:
@@ -15,6 +14,7 @@ Both projects need to be installed and run separately.
 ## 🚀 Getting Started
 
 ### 1. Clone the Repository
+
 ```powershell
 git clone https://github.com/VikashRaj-cmd/alumniNet.git
 cd alumniNet
@@ -70,3 +70,5 @@ This will start the recommendation system on:
 * Do **not** swap or omit ports, or the apps may fail to run correctly.
 
 ---
+
+
