@@ -1,5 +1,3 @@
----
-
 # 🎓 AlumniNet
 
 AlumniNet is a full-stack web application with two separate parts:
@@ -69,4 +67,3 @@ This will start the recommendation system on:
 * Always start **RecommendationSystem** on **8080**.
 * Do **not** swap or omit ports, or the apps may fail to run correctly.
 
----
