@@ -50,7 +50,7 @@ This will start the frontend on:
 ### 🔹 Run the RecommendationSystem (port 8080)
 
 ```powershell
-cd RecommendationSystem
+cd RecommendationSystem/mentor-dash-launch
 npm run dev
 ```
 
