@@ -2,10 +2,9 @@
 
 AlumniNet is a full-stack web application with two separate parts:
 
+* **Firebase Auth** → Sign In and Create Account Page (React + Vite)
 * **Frontend** → main user interface (React + Vite)
 * **RecommendationSystem** → recommendation engine (React + Vite)
-
-Both projects need to be installed and run separately.
 
 ---
 
@@ -32,8 +31,7 @@ npm install
 
 ## ▶️ Running the Applications
 
-⚠️ **Important:** You must run each project with the exact commands shown below.
-Using the wrong command can cause port conflicts and crash the apps.
+⚠️ **Important:** You must run each project with the exact commands shown below. Open only the Frontend in your browser at: http://localhost:8081 . Log in from the Auth page. After login, you’ll see a floating rocket button on the bottom-right corner. Clicking this will navigate you to the Recommendation System. (This is for testing purposes only, you can also directly open both apps separately if you want.)
 
 ---
 
@@ -41,7 +39,7 @@ Using the wrong command can cause port conflicts and crash the apps.
 
 ```powershell
 cd Frontend
-$env:PORT=8081; npm start
+npm run dev
 ```
 
 This will start the frontend on:
@@ -53,7 +51,7 @@ This will start the frontend on:
 
 ```powershell
 cd RecommendationSystem
-$env:PORT=8080; npm start
+npm run dev
 ```
 
 This will start the recommendation system on:
@@ -61,9 +59,5 @@ This will start the recommendation system on:
 
 ---
 
-## 💡 Notes
 
-* Always start **Frontend** on **8081**.
-* Always start **RecommendationSystem** on **8080**.
-* Do **not** swap or omit ports, or the apps may fail to run correctly.
 
