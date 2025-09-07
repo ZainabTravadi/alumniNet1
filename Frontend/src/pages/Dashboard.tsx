@@ -1,27 +1,40 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { useNavigate } from "react-router-dom";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { auth } from "@/firebase"; // ensure firebase.ts exists in Frontend
+
+import { 
+  Card, CardContent, CardDescription, CardHeader, CardTitle 
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Users, 
-  Calendar, 
-  MessageSquare, 
-  TrendingUp, 
-  ArrowRight,
-  MapPin,
-  Building2,
-  GraduationCap,
-  Star
+  Users, Calendar, MessageSquare, TrendingUp, 
+  ArrowRight, MapPin, Building2, GraduationCap, Star 
 } from 'lucide-react';
-import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
   const [selectedAlumni, setSelectedAlumni] = useState<any>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+  // ✅ Protect the route
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        navigate("/auth"); // redirect to auth page if not logged in
+      } else {
+        setUser(currentUser);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
+
+  // Example stats
   const stats = [
     { label: 'Total Alumni', value: '2,847', icon: Users, color: 'text-blue-500' },
     { label: 'Upcoming Events', value: '12', icon: Calendar, color: 'text-green-500' },
@@ -29,6 +42,7 @@ const Dashboard = () => {
     { label: 'This Month Donations', value: '$12.5K', icon: TrendingUp, color: 'text-orange-500' }
   ];
 
+  // Example alumni list
   const recentAlumni = [
     {
       id: 1,
@@ -83,6 +97,7 @@ const Dashboard = () => {
     }
   ];
 
+  // Example upcoming events
   const upcomingEvents = [
     {
       title: 'Annual Alumni Meetup 2024',
@@ -104,9 +119,27 @@ const Dashboard = () => {
     }
   ];
 
+  // ✅ Logout handler
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/auth");
+  };
+
+  if (!user) {
+    return <p className="text-center mt-20">Checking authentication...</p>;
+  }
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-8">
+        {/* Top Bar with Logout */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold">
+            Logged in as <span className="text-primary">{user.email}</span>
+          </h2>
+          <Button variant="outline" onClick={handleLogout}>Logout</Button>
+        </div>
+
         {/* Hero Section */}
         <div className="text-center space-y-4 animate-fade-in">
           <h1 className="text-4xl md:text-6xl font-bold">
@@ -237,6 +270,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
       {selectedAlumni && (
         <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
           <DialogContent className="sm:max-w-2xl w-full">
@@ -318,7 +352,7 @@ const Dashboard = () => {
             </div>
           </DialogContent>
         </Dialog>
-        )}
+      )}
     </div>
   );
 };

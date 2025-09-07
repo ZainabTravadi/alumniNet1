@@ -59,5 +59,3 @@ This will start the recommendation system on:
 
 ---
 
-
-

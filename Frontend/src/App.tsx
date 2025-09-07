@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/layout/Header";
 import Dashboard from "./pages/Dashboard";
 import Directory from "./pages/Directory";
@@ -14,22 +14,29 @@ import Profile from "./pages/Profile";
 import UpdateProfile from "./pages/UpdateProfile";
 import NotificationCenter from "./components/notifications/NotificationCenter";
 import NotFound from "./pages/NotFound";
+import { AuthCard } from "./components/auth/AuthCard";
 
 // 🚀 Import your floating rocket
 import FloatingRocket from "./components/ui/FloatingRocket";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+const App = () => {
+  const location = useLocation();
+  const hideHeader = location.pathname === "/" || location.pathname === "/auth";
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
         <div className="min-h-screen">
-          <Header />
+          {!hideHeader && <Header />}
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            {/* Auth first */}
+            <Route path="/" element={<AuthCard />} />
+            <Route path="/auth" element={<AuthCard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/directory" element={<Directory />} />
             <Route path="/events" element={<Events />} />
             <Route path="/forums" element={<Forums />} />
@@ -38,16 +45,21 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/update-profile" element={<UpdateProfile />} />
             <Route path="/notifications" element={<NotificationCenter />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-
-          {/* 🚀 Floating rocket button, always visible */}
+          {/* 🚀 Floating rocket button */}
           <FloatingRocket />
         </div>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
+
+const RootApp = () => (
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
 );
 
-export default App;
+export default RootApp;
