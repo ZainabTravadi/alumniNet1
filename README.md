@@ -13,7 +13,7 @@ AlumniNet is a full-stack web application with two separate parts:
 ### 1. Clone the Repository
 
 ```powershell
-git clone https://github.com/VikashRaj-cmd/alumniNet.git
+git clone https://github.com/ZainabTravadi/alumniNet.git
 cd alumniNet
 ```
 
@@ -39,6 +39,7 @@ npm install
 
 ```powershell
 cd Frontend
+npm install
 npm run dev
 ```
 
@@ -51,6 +52,7 @@ This will start the frontend on:
 
 ```powershell
 cd RecommendationSystem/mentor-dash-launch
+npm install
 npm run dev
 ```
 
