@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom'; 
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,7 @@ const DUMMY_ALUMNI: Alumnus[] = [
 
 
 const Directory = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedBatch, setSelectedBatch] = useState('All Batches');
     const [selectedDepartment, setSelectedDepartment] = useState('All Departments');
@@ -278,7 +280,7 @@ const Directory = () => {
                                         </div>
 
                                         <div className="flex gap-2 pt-2">
-                                            <Button size="sm" className="flex-1">
+                                            <Button size="sm" className="flex-1" onClick={() => navigate(`/chat/${alumnus.id}`)}>
                                                 <Mail className="h-3 w-3 mr-2" />
                                                 Message
                                             </Button>

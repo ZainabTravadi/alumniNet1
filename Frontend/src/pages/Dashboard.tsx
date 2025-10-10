@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { auth } from "@/firebase";
+// 💡 CONFIRMED FIRESTORE IMPORTS
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { auth, db } from "@/firebase"; 
 
 // UI Imports
 import { 
@@ -44,7 +46,6 @@ interface Event {
 
 // ------------------ 💡 Client-Side Date Formatting Utility ------------------
 const formatDate = (dateString: string): string => {
-    // Handling the raw string sent by the Python API
     if (dateString.includes('Timestamp')) {
         return "Date Pending Format";
     }
@@ -71,7 +72,10 @@ const DUMMY_ALUMNI: AlumniProfile[] = [
 const DUMMY_EVENTS: Event[] = [
     { title: 'Annual Alumni Meetup 2024', date: 'October 25, 2025', location: 'Main Campus', attendees: 245 },
     { title: 'Tech Talk: AI in Industry', date: 'November 1, 2025', location: 'Virtual Event', attendees: 89 },
-    { title: 'Career Fair 2024', date: 'November 15, 2025', location: 'Convention Center', attendees: 156 }
+    { title: 'Career Fair 2024', date: 'November 15, 2025', location: 'Convention Center', attendees: 156 },
+    { title: 'Holiday Mixer', date: 'December 20, 2025', location: 'City Ballroom', attendees: 110 },
+    { title: 'Future of Work Panel', date: 'January 10, 2026', location: 'Virtual Event', attendees: 65 },
+    { title: 'Startup Pitch Night', date: 'February 5, 2026', location: 'Innovation Hub', attendees: 92 }
 ];
 
 
@@ -87,6 +91,14 @@ const Dashboard = () => {
 
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/dashboard';
 
+    // 💡 STATE FOR LIVE STATS
+    const [liveStats, setLiveStats] = useState({
+        totalAlumni: '...',
+        upcomingEvents: '...',
+        activeDiscussions: '...',
+        monthlyDonations: '...',
+    });
+
     // ------------------ 💡 Auth Guard ------------------
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -96,14 +108,14 @@ const Dashboard = () => {
         return () => unsubscribe();
     }, [navigate]);
 
-    // ------------------ 💡 Data Fetch with Fallback ------------------
-    useEffect(() => {
+    // ------------------ 💡 Data Fetch for Recent Alumni & Events (API) ------------------
+    ;
+useEffect(() => {
         const fetchData = async () => {
             if (!user) return;
             setIsDataLoading(true);
 
             try {
-                // Fetch from API
                 const [alumniRes, eventsRes] = await Promise.all([
                     fetch(`${API_BASE_URL}/alumni`),
                     fetch(`${API_BASE_URL}/events`)
@@ -121,7 +133,6 @@ const Dashboard = () => {
                     eventData = eventsResult.data || [];
                 }
 
-                // Fallback: Use live data if present, otherwise use dummy data
                 setRecentAlumni(alumniData.length ? alumniData : DUMMY_ALUMNI);
                 setUpcomingEvents(eventData.length ? eventData : DUMMY_EVENTS);
             } catch (err) {
@@ -134,13 +145,89 @@ const Dashboard = () => {
         };
 
         if (user) fetchData();
-    }, [user, API_BASE_URL]);
+    }, [user, API_BASE_URL])
+    // ------------------ 💡 Data Fetch for Dashboard STATS (Firestore) ------------------
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!user) return; 
 
+            try {
+                // 1. Total Alumni (Count of 'users' collection - implicitly created by auth)
+                const alumniQuery = query(collection(db, "users"));
+
+                // 2. Upcoming Events (Count of 'events' where date is in the future)
+                const today = new Date();
+                const eventsQuery = query(
+                    collection(db, "events"),
+                    where("date", ">=", Timestamp.fromDate(today))
+                );
+
+                // 3. Active Discussions (Count of 'forum_threads' collection)
+                const threadsQuery = query(collection(db, "forum_threads"));
+                
+                // 4. Total Raised (Sum of 'raised' field in 'fundraising_campaigns')
+                const donationsQuery = query(collection(db, "fundraising_campaigns"));
+                
+                // Execute all queries concurrently
+                const [alumniSnap, eventsSnap, threadsSnap, donationsSnap] = await Promise.all([
+                    getDocs(alumniQuery),
+                    getDocs(eventsQuery),
+                    getDocs(threadsQuery),
+                    getDocs(donationsQuery),
+                ]);
+
+                // Calculate Total Raised
+                let totalRaised = 0;
+                donationsSnap.forEach(doc => {
+                    const data = doc.data();
+                    // Assuming 'raised' field exists and is a number
+                    if (typeof data.raised === 'number') {
+                        totalRaised += data.raised;
+                    }
+                });
+
+                // Helper to format currency for thousands (K)
+                const formatCurrency = (amount: number) => {
+                    if (amount >= 1000) {
+                        // Example: 12500 -> $12.5K
+                        return `₹${(amount / 1000).toFixed(1)}K`; 
+                    }
+                    return amount.toLocaleString('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    });
+                };
+
+                setLiveStats({
+                    totalAlumni: alumniSnap.size.toLocaleString(),
+                    upcomingEvents: eventsSnap.size.toLocaleString(),
+                    activeDiscussions: threadsSnap.size.toLocaleString(),
+                    monthlyDonations: formatCurrency(totalRaised),
+                });
+
+            } catch (err) {
+                console.error("❌ Firestore STATS fetch error:", err);
+                // Fallback to error indicators
+                setLiveStats({
+                    totalAlumni: 'N/A',
+                    upcomingEvents: 'N/A',
+                    activeDiscussions: 'N/A',
+                    monthlyDonations: 'Error',
+                });
+            }
+        };
+
+        if (user) fetchStats();
+    }, [user]); // Depend on user and run once on mount
+
+    // 💡 STATS ARRAY USES LIVE STATE
     const stats = [
-        { label: 'Total Alumni', value: '2,847', icon: Users, color: 'text-blue-500' },
-        { label: 'Upcoming Events', value: '12', icon: Calendar, color: 'text-green-500' },
-        { label: 'Active Discussions', value: '89', icon: MessageSquare, color: 'text-purple-500' },
-        { label: 'This Month Donations', value: '$12.5K', icon: TrendingUp, color: 'text-orange-500' }
+        { label: 'Total Alumni', value: liveStats.totalAlumni, icon: Users, color: 'text-blue-500' },
+        { label: 'Upcoming Events', value: liveStats.upcomingEvents, icon: Calendar, color: 'text-green-500' },
+        { label: 'Active Discussions', value: liveStats.activeDiscussions, icon: MessageSquare, color: 'text-purple-500' },
+        { label: 'Total Raised', value: liveStats.monthlyDonations, icon: TrendingUp, color: 'text-orange-500' }
     ];
 
     const handleLogout = async () => {
@@ -187,7 +274,7 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Stats */}
+                {/* Stats Section (Uses liveStats from Firestore) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
                     {stats.map((stat) => (
                         <Card key={stat.label} className="glass-card hover-glow">
@@ -195,7 +282,7 @@ const Dashboard = () => {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                                        <p className="text-3xl font-bold">{stat.value}</p>
+                                        <p className="text-3xl font-bold">{stat.value}</p> 
                                     </div>
                                     <stat.icon className={`h-8 w-8 ${stat.color}`} />
                                 </div>
@@ -205,7 +292,7 @@ const Dashboard = () => {
                 </div>
 
                 <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Recent Alumni */}
+                    {/* Recent Alumni (Limited to 5, navigates to /recent-alumnis) */}
                     <div className="lg:col-span-2">
                         <Card className="glass-card animate-scale-in">
                             <CardHeader>
@@ -216,7 +303,7 @@ const Dashboard = () => {
                                 <CardDescription>Welcome our newest community members</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {recentAlumni.map((alumni) => (
+                                {recentAlumni.slice(0, 5).map((alumni) => (
                                     <div key={alumni.id} className="flex items-center space-x-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => {
                                         setSelectedAlumni(alumni);
                                         setIsProfileOpen(true);
@@ -239,12 +326,12 @@ const Dashboard = () => {
                                         <Button variant="ghost" size="sm">Connect</Button>
                                     </div>
                                 ))}
-                                <Button variant="outline" className="w-full">View All Alumni</Button>
+                                <Button variant="outline" className="w-full" onClick={() => navigate("/recent-alumnis")}>View All Alumni</Button>
                             </CardContent>
                         </Card>
                     </div>
 
-                    {/* Events */}
+                    {/* Events (Limited to 5, navigates to /events) */}
                     <div>
                         <Card className="glass-card animate-scale-in">
                             <CardHeader>
@@ -255,11 +342,10 @@ const Dashboard = () => {
                                 <CardDescription>Don't miss these exciting events</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {upcomingEvents.map((event, index) => (
+                                {upcomingEvents.slice(0, 5).map((event, index) => (
                                     <div key={index} className="space-y-2 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                                         <h4 className="font-medium text-sm">{event.title}</h4>
                                         <div className="text-xs text-muted-foreground space-y-1">
-                                            {/* 💡 Use the formatting utility here */}
                                             <div>{formatDate(event.date)}</div> 
                                             <div className="flex items-center justify-between">
                                                 <span>{event.location}</span>
@@ -270,74 +356,74 @@ const Dashboard = () => {
                                         </div>
                                     </div>
                                 ))}
-                                <Button variant="outline" className="w-full" size="sm">View All Events</Button>
+                                <Button variant="outline" className="w-full" size="sm" onClick={() => navigate("/events")}>View All Events</Button>
                             </CardContent>
                         </Card>
                     </div>
                 </div>
-            </div>
-
-            {/* Alumni Dialog */}
-            {selectedAlumni && (
-                <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                    <DialogContent className="sm:max-w-2xl w-full">
-                        <DialogHeader>
-                            <div className="flex items-start space-x-4">
-                                <Avatar className="h-24 w-24 border-2 border-primary">
-                                    <AvatarImage src={selectedAlumni.avatar} />
-                                    <AvatarFallback className="text-3xl">
-                                        {selectedAlumni.name.split(' ').map(n => n[0]).join('')}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="space-y-1">
-                                    <DialogTitle className="text-2xl font-bold">{selectedAlumni.name}</DialogTitle>
-                                    <DialogDescription className="text-md">
-                                        {selectedAlumni.title} at <span className="font-semibold text-primary">{selectedAlumni.company}</span>
-                                    </DialogDescription>
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2">
-                                        <span className="flex items-center gap-1.5">
-                                            <GraduationCap className="h-4 w-4" />
-                                            Batch of {selectedAlumni.batch}
-                                        </span>
-                                        <span className="flex items-center gap-1.5">
-                                            <MapPin className="h-4 w-4" />
-                                            {selectedAlumni.location}
-                                        </span>
+                
+                {/* Alumni Dialog */}
+                {selectedAlumni && (
+                    <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+                        <DialogContent className="sm:max-w-2xl w-full">
+                            <DialogHeader>
+                                <div className="flex items-start space-x-4">
+                                    <Avatar className="h-24 w-24 border-2 border-primary">
+                                        <AvatarImage src={selectedAlumni.avatar} />
+                                        <AvatarFallback className="text-3xl">
+                                            {selectedAlumni.name.split(' ').map(n => n[0]).join('')}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="space-y-1">
+                                        <DialogTitle className="text-2xl font-bold">{selectedAlumni.name}</DialogTitle>
+                                        <DialogDescription className="text-md">
+                                            {selectedAlumni.title} at <span className="font-semibold text-primary">{selectedAlumni.company}</span>
+                                        </DialogDescription>
+                                        <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2">
+                                            <span className="flex items-center gap-1.5">
+                                                <GraduationCap className="h-4 w-4" />
+                                                Batch of {selectedAlumni.batch}
+                                            </span>
+                                            <span className="flex items-center gap-1.5">
+                                                <MapPin className="h-4 w-4" />
+                                                {selectedAlumni.location}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </DialogHeader>
+                            </DialogHeader>
 
-                        <div className="py-4 space-y-6">
-                            <div>
-                                <h3 className="text-lg font-semibold mb-2">Bio</h3>
-                                <p className="text-muted-foreground">{selectedAlumni.bio}</p>
-                            </div>
+                            <div className="py-4 space-y-6">
+                                <div>
+                                    <h3 className="text-lg font-semibold mb-2">Bio</h3>
+                                    <p className="text-muted-foreground">{selectedAlumni.bio}</p>
+                                </div>
 
-                            <div>
-                                <h3 className="text-lg font-semibold mb-2">Expertise</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedAlumni.expertise.map((skill) => (
-                                        <Badge key={skill} variant="secondary">{skill}</Badge>
-                                    ))}
+                                <div>
+                                    <h3 className="text-lg font-semibold mb-2">Expertise</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedAlumni.expertise.map((skill) => (
+                                            <Badge key={skill} variant="secondary">{skill}</Badge>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                                    <div><h4 className="font-semibold">Department</h4><p className="text-muted-foreground">{selectedAlumni.department}</p></div>
+                                    <div><h4 className="font-semibold">Rating</h4><div className="flex items-center gap-1"><Star className="h-5 w-5 text-yellow-500 fill-current" /><span className="font-medium text-muted-foreground">{selectedAlumni.rating}</span></div></div>
+                                    <div><h4 className="font-semibold">Mentees</h4><p className="text-muted-foreground">{selectedAlumni.mentees}</p></div>
+                                    <div><h4 className="font-semibold">Availability</h4><p className="text-muted-foreground">{selectedAlumni.availability}</p></div>
+                                    <div><h4 className="font-semibold">Response Time</h4><p className="text-muted-foreground">{selectedAlumni.responseTime}</p></div>
+                                    <div><h4 className="font-semibold">Languages</h4><p className="text-muted-foreground">{selectedAlumni.languages.join(', ')}</p></div>
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                <div><h4 className="font-semibold">Department</h4><p className="text-muted-foreground">{selectedAlumni.department}</p></div>
-                                <div><h4 className="font-semibold">Rating</h4><div className="flex items-center gap-1"><Star className="h-5 w-5 text-yellow-500 fill-current" /><span className="font-medium text-muted-foreground">{selectedAlumni.rating}</span></div></div>
-                                <div><h4 className="font-semibold">Mentees</h4><p className="text-muted-foreground">{selectedAlumni.mentees}</p></div>
-                                <div><h4 className="font-semibold">Availability</h4><p className="text-muted-foreground">{selectedAlumni.availability}</p></div>
-                                <div><h4 className="font-semibold">Response Time</h4><p className="text-muted-foreground">{selectedAlumni.responseTime}</p></div>
-                                <div><h4 className="font-semibold">Languages</h4><p className="text-muted-foreground">{selectedAlumni.languages.join(', ')}</p></div>
+                            <div className="flex justify-end space-x-2">
+                                <Button variant="outline" onClick={() => setIsProfileOpen(false)}>Close</Button>
                             </div>
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                            <Button variant="outline" onClick={() => setIsProfileOpen(false)}>Close</Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            )}
+                        </DialogContent>
+                    </Dialog>
+                )}
+            </div>
         </div>
     );
 };
