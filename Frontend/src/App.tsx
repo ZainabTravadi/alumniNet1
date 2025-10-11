@@ -19,6 +19,7 @@ import RecentAlumniPage from "./pages/RecentAlumni";
 import ChatPage from "./pages/ChatPage"; // Chat Page
 import { useState, useEffect } from "react";
 import FloatingRocket from "./components/ui/FloatingRocket";
+import EventDetailPage from "./pages/EventDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ const App = () => {
               <Route path="/update-profile" element={<UpdateProfile />} />
               <Route path="/notifications" element={<NotificationCenter />} />
               <Route path="/recent-alumnis" element={<RecentAlumniPage />} />
+              <Route path="/events/:eventId" element={<EventDetailPage />} />
 
               {/* Chat Page (no scroll, fixed height) */}
               <Route path="/chat/:alumniId" element={<ChatPage />} />
