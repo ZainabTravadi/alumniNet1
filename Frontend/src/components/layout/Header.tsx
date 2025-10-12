@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,10 +26,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 
+// 🔹 Firebase imports
+import { auth, db } from '@/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [userData, setUserData] = useState<any>(null); // 🔹 store Firestore user data
+  const [loadingUser, setLoadingUser] = useState(true); // 🔹 show loading while fetching user
   const searchRef = useRef(null);
   const location = useLocation();
 
@@ -42,63 +49,26 @@ const Header = () => {
     { name: 'Fundraising', href: '/fundraising', icon: DollarSign },
   ];
 
-  // Example alumni data
-  const alumniList = [
-    {
-      name: "Sarah Chen",
-      year: 2019,
-      department: "Computer Science",
-      company: "Google",
-      location: "San Francisco",
-      email: "sarah.chen@gmail.com",
-      bio: "AI enthusiast and mentor.",
-      avatar: "/placeholder-avatar.jpg"
-    },
-    {
-      name: "Michael Rodriguez",
-      year: 2020,
-      department: "Mechanical Eng",
-      company: "Tesla",
-      location: "Austin",
-      email: "michael.r@tesla.com",
-      bio: "EV design specialist.",
-      avatar: "/placeholder-avatar.jpg"
-    },
-    {
-      name: "Priya Patel",
-      year: 2018,
-      department: "Electrical Eng",
-      company: "Apple",
-      location: "Cupertino",
-      email: "priya.patel@apple.com",
-      bio: "Hardware engineer and speaker.",
-      avatar: "/placeholder-avatar.jpg"
-    },
-    {
-      name: "John Doe",
-      year: 2017,
-      department: "Civil Eng",
-      company: "Amazon",
-      location: "Seattle",
-      email: "john.doe@amazon.com",
-      bio: "Infrastructure project manager.",
-      avatar: "/placeholder-avatar.jpg"
-    },
-    {
-      name: "Aisha Khan",
-      year: 2021,
-      department: "Business Admin",
-      company: "Meta",
-      location: "Menlo Park",
-      email: "aisha.khan@meta.com",
-      bio: "Product manager and startup advisor.",
-      avatar: "/placeholder-avatar.jpg"
-    },
-  ];
+  // 🔹 Listen for authenticated user and fetch Firestore profile
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoadingUser(true);
+      if (user) {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setUserData({ uid: user.uid, ...userSnap.data() });
+        } else {
+          console.warn('⚠️ No user profile found in Firestore');
+        }
+      } else {
+        setUserData(null);
+      }
+      setLoadingUser(false);
+    });
 
-  const filteredAlumni = search.length > 0
-    ? alumniList.filter(a => a.name.toLowerCase().includes(search.toLowerCase()))
-    : [];
+    return () => unsubscribe();
+  }, []);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -106,7 +76,7 @@ const Header = () => {
     <header className="glass-nav sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo & Brand */}
+          {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
@@ -118,27 +88,27 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center space-x-3 ml-6">
-  {navigation.map((item) => (
-    <Link
-      key={item.name}
-      to={item.href}
-      className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-        isActive(item.href)
-          ? 'bg-primary text-primary-foreground'
-          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-      }`}
-    >
-      <item.icon className="h-4 w-4 mr-2" />
-      <span>{item.name}</span>
-    </Link>
-  ))}
-</nav>
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                <item.icon className="h-4 w-4 mr-2" />
+                <span>{item.name}</span>
+              </Link>
+            ))}
+          </nav>
 
-          {/* Search & Actions */}
+          {/* Right Section */}
           <div className="flex items-center space-x-4">
-            {/* Search */}
+            {/* Search Bar */}
             <div className="hidden lg:block relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -146,30 +116,10 @@ const Header = () => {
                 placeholder="Search alumni..."
                 className="pl-10 w-64 bg-muted/50"
                 value={search}
-                onChange={e => {
-                  setSearch(e.target.value);
-                  setShowDropdown(true);
-                }}
+                onChange={(e) => setSearch(e.target.value)}
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
               />
-              {showDropdown && filteredAlumni.length > 0 && (
-                <div className="absolute left-0 mt-1 w-full bg-background border rounded shadow-lg z-50 max-h-60 overflow-auto">
-                  {filteredAlumni.map((alum, idx) => (
-                    <div key={idx} className="px-4 py-2 hover:bg-accent cursor-pointer flex items-center gap-3">
-                      <img src={alum.avatar} alt={alum.name} className="w-8 h-8 rounded-full object-cover border" />
-                      <div>
-                        <span className="font-medium">{alum.name}</span>
-                        <div className="text-xs text-muted-foreground">
-                          {alum.year} • {alum.department} • {alum.company} • {alum.location}
-                        </div>
-                        <div className="text-xs text-muted-foreground">{alum.email}</div>
-                        <div className="text-xs text-muted-foreground italic">{alum.bio}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Notifications */}
@@ -182,42 +132,67 @@ const Header = () => {
               </Button>
             </Link>
 
-            {/* Profile Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder-avatar.jpg" alt="Profile" />
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">John Doe</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      Class of 2018 • CSE
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* 🔹 Profile Dropdown */}
+            {loadingUser ? (
+              <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+            ) : userData ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={userData.avatarUrl || '/placeholder-avatar.jpg'}
+                        alt={userData.displayName || 'User'}
+                      />
+                      <AvatarFallback>
+                        {userData.displayName
+                          ? userData.displayName[0].toUpperCase()
+                          : 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {userData.displayName || 'Unnamed User'}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {userData.batch ? `Class of ${userData.batch}` : ''}{' '}
+                        {userData.department ? `• ${userData.department}` : ''}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => auth.signOut()}
+                    className="text-red-600"
+                  >
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button variant="outline" size="sm">Login</Button>
+              </Link>
+            )}
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu */}
             <Button
               variant="ghost"
               size="sm"
@@ -228,29 +203,6 @@ const Header = () => {
             </Button>
           </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-border/50">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`block px-3 py-2 rounded-lg text-base font-medium ${
-                    isActive(item.href)
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <item.icon className="h-4 w-4 inline mr-2" />
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </header>
   );

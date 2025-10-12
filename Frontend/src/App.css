@@ -115,3 +115,15 @@
   color: #888;
 }
 
+.btn-remove-link {
+  color: #dc2626 !important;
+  border-color: #e5e7eb !important;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.btn-remove-link:hover:not(:disabled) {
+  background: #dc2626 !important;
+  color: #fff !important;
+  border-color: #dc2626 !important;
+  cursor: pointer;
+}
+

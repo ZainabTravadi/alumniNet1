@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import ExperienceEditorCard from './ExperienceEditor';
+import SkillInputWithSuggestions from './SkillInputWithSuggestions';
 import { 
   User,
   MapPin,
@@ -34,6 +36,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [showPrivateInfo, setShowPrivateInfo] = useState(false);
+  
 
   const [profile, setProfile] = useState({
     firstName: 'John',
@@ -148,11 +151,10 @@ const Profile = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 animate-fade-in">
           <div>
             <h1 className="text-4xl md:text-5xl font-bold">
-              My{' '}
-              <span className="bg-gradient-to-r from-primary via-primary to-primary-foreground bg-clip-text text-transparent">
-                Profile
-              </span>
-            </h1>
+                            <span className="bg-gradient-to-r from-primary via-primary to-primary-foreground bg-clip-text text-transparent">
+                                Profile
+                            </span>
+                        </h1>
             <p className="text-xl text-muted-foreground mt-2">
               Manage your profile information and preferences
             </p>

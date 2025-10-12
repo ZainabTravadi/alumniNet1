@@ -6,7 +6,6 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, Users } from "lucide-react";
 import networkingIllustration from "@/assets/networking-illustration.jpg";
 import { useNavigate } from "react-router-dom";
 
-
 // Firebase imports
 import { auth, db } from "@/firebase";
 import {
@@ -44,13 +43,31 @@ export const AuthCard = () => {
         );
         const user = userCredential.user;
 
-        // 🔹 Store profile in Firestore
+        // 🔹 Store profile with default fields
         await setDoc(doc(db, "users", user.uid), {
           email: user.email,
           createdAt: new Date(),
+          // Default profile fields
+          availability: "",
+          avatarUrl: "",
+          batch: "",
+          bio: "",
+          company: "",
+          department: "",
+          displayName: "",
+          expertise: [],
+          isMentor: false,
+          languages: [],
+          linkedinUrl: "",
+          location: "",
+          menteesCount: 0,
+          rating: 0,
+          responseTime: "",
+          title: "",
         });
 
-        console.log("✅ User signed up:", user);
+        console.log("✅ User signed up and profile created:", user);
+        navigate("/complete-profile");
       } else {
         // 🔹 Sign in existing user
         const userCredential = await signInWithEmailAndPassword(
@@ -59,9 +76,8 @@ export const AuthCard = () => {
           password
         );
         console.log("✅ User signed in:", userCredential.user);
+        navigate("/dashboard");
       }
-
-      navigate("/dashboard");
     } catch (error: any) {
       console.error("🔥 Auth error:", error.message);
       alert(error.message);
@@ -71,12 +87,11 @@ export const AuthCard = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-hero">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-hero relative overflow-hidden">
       {/* Background overlay */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-glow animate-glow" />
-      </div>
+      <div className="absolute inset-0 bg-gradient-glow animate-glow" />
 
+      {/* Glass card container */}
       <div
         className="glass-card rounded-2xl w-full max-w-3xl overflow-hidden animate-fade-in-up relative z-10"
         style={{
@@ -86,43 +101,35 @@ export const AuthCard = () => {
         }}
       >
         <div className="flex flex-col lg:flex-row min-h-[500px]">
-          {/* Left Side */}
-          <div className="flex-1 relative overflow-hidden lg:min-h-[500px] bg-gradient-primary">
+          {/* Left side (Image + text) */}
+          <div className="flex-1 bg-gradient-primary relative flex items-center justify-center">
             <div className="absolute inset-0 bg-gradient-glow opacity-40" />
-
-            <div className="relative z-10 p-8 lg:p-12 flex flex-col justify-center items-center text-center h-full">
-              <div className="mb-8">
-                <img
-                  src={networkingIllustration}
-                  alt="Alumni Networking Platform"
-                  className="w-full max-w-md mx-auto opacity-90 animate-glow rounded-xl"
-                  style={{
-                    filter: "drop-shadow(0 10px 30px rgba(147, 51, 234, 0.4))",
-                  }}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground">
-                  Hello! 👋
-                </h1>
-                <p className="text-lg max-w-md text-left bg-clip-text text-transparent bg-gradient-to-r from-white/40 via-white/70 to-white/40 animate-pulse">
-  Connect with your alumni network and build meaningful
-  professional relationships
-</p>
-
-                <div className="flex items-center gap-2 text-primary-foreground/80">
-                  <Users className="w-5 h-5" />
-                  <span className="text-sm font-medium">Join 10,000+ Alumni</span>
-                </div>
+            <div className="relative z-10 p-8 lg:p-12 text-center flex flex-col items-center justify-center">
+              <img
+                src={networkingIllustration}
+                alt="Alumni Networking Platform"
+                className="w-full max-w-md mx-auto opacity-90 rounded-xl mb-8"
+                style={{
+                  filter: "drop-shadow(0 10px 30px rgba(147, 51, 234, 0.4))",
+                }}
+              />
+              <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
+                Hello! 👋
+              </h1>
+              <p className="text-lg max-w-md text-center bg-clip-text text-transparent bg-gradient-to-r from-white/40 via-white/70 to-white/40 animate-pulse mb-4">
+                Connect with your alumni network and build meaningful professional relationships
+              </p>
+              <div className="flex items-center gap-2 text-primary-foreground/80">
+                <Users className="w-5 h-5" />
+                <span className="text-sm font-medium">Join 10,000+ Alumni</span>
               </div>
             </div>
           </div>
 
-          {/* Right Side - Auth Form */}
-          <div className="flex-1 p-8 lg:p-12 flex flex-col justify-center">
+          {/* Right side (Form) */}
+          <div className="flex-1 bg-background/10 p-8 lg:p-12 flex flex-col justify-center">
             <div className="w-full max-w-md mx-auto space-y-8">
-              {/* Form Header */}
+              {/* Header */}
               <div className="text-center space-y-3">
                 <h2 className="text-3xl font-bold text-foreground">
                   {isSignUp ? "Create Account" : "Welcome Back"}
@@ -146,7 +153,6 @@ export const AuthCard = () => {
                     <Input
                       id="email"
                       type="email"
-                      variant="glass"
                       placeholder="your.email@university.edu"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -158,10 +164,7 @@ export const AuthCard = () => {
 
                 {/* Password */}
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="password"
-                    className="text-foreground font-medium"
-                  >
+                  <Label htmlFor="password" className="text-foreground font-medium">
                     Password
                   </Label>
                   <div className="relative">
@@ -169,7 +172,6 @@ export const AuthCard = () => {
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      variant="glass"
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -190,13 +192,10 @@ export const AuthCard = () => {
                   </div>
                 </div>
 
-                {/* Confirm Password (Sign Up only) */}
+                {/* Confirm Password */}
                 {isSignUp && (
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="confirmPassword"
-                      className="text-foreground font-medium"
-                    >
+                    <Label htmlFor="confirmPassword" className="text-foreground font-medium">
                       Confirm Password
                     </Label>
                     <div className="relative">
@@ -204,7 +203,6 @@ export const AuthCard = () => {
                       <Input
                         id="confirmPassword"
                         type="password"
-                        variant="glass"
                         placeholder="Confirm your password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -227,7 +225,7 @@ export const AuthCard = () => {
                   </div>
                 )}
 
-                {/* Submit */}
+                {/* Submit Button */}
                 <Button
                   type="submit"
                   variant="gradient"
@@ -243,7 +241,7 @@ export const AuthCard = () => {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
 
-                {/* Toggle SignIn/SignUp */}
+                {/* Toggle Mode */}
                 <div className="text-center">
                   <span className="text-sm text-muted-foreground">
                     {isSignUp

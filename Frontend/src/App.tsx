@@ -20,6 +20,7 @@ import ChatPage from "./pages/ChatPage"; // Chat Page
 import { useState, useEffect } from "react";
 import FloatingRocket from "./components/ui/FloatingRocket";
 import EventDetailPage from "./pages/EventDetailPage";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => {
               <Route path="/mentorship" element={<Mentorship />} />
               <Route path="/fundraising" element={<Fundraising />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="/update-profile" element={<UpdateProfile />} />
               <Route path="/notifications" element={<NotificationCenter />} />
               <Route path="/recent-alumnis" element={<RecentAlumniPage />} />
