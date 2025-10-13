@@ -436,7 +436,6 @@ const Fundraising = () => {
                                                     {renderDonationContent()}
                                                 </DialogContent>
                                             </Dialog>
-                                            <Button variant="outline">Learn More</Button>
                                         </div>
                                     </CardContent>
                                 </Card>

@@ -22,6 +22,8 @@ import FloatingRocket from "./components/ui/FloatingRocket";
 import EventDetailPage from "./pages/EventDetailPage";
 import Settings from "./pages/Settings";
 import DiscussionPage from "./pages/DiscussionPage";
+import MentorApplicationPage from './pages/MentorApplicationPage'; 
+import { ProfileCompletionCard } from "./pages/ProfileCompletionCard";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +60,7 @@ const App = () => {
               {/* Authentication */}
               <Route path="/" element={<AuthCard />} />
               <Route path="/auth" element={<AuthCard />} />
+              <Route path="/complete-profile" element={<ProfileCompletionCard />} />
 
               {/* Main Pages */}
               <Route path="/dashboard" element={<Dashboard />} />
@@ -72,6 +75,8 @@ const App = () => {
               <Route path="/notifications" element={<NotificationCenter />} />
               <Route path="/recent-alumnis" element={<RecentAlumniPage />} />
               <Route path="/events/:eventId" element={<EventDetailPage />} />
+              <Route path="/apply-to-mentor" element={<MentorApplicationPage />} />
+
 
               {/* Chat Page (no scroll, fixed height) */}
               <Route path="/chat/:alumniId" element={<ChatPage />} />

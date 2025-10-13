@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 // 💡 CONFIRMED FIRESTORE IMPORTS
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
@@ -259,7 +259,7 @@ useEffect(() => {
                             AlumniNet
                         </span>
                     </h1>
-                    <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Connect, collaborate, and grow with your alumni network. Stay updated with events, 
                         find mentors, and contribute to your alma mater's future.
                     </p>
@@ -268,7 +268,7 @@ useEffect(() => {
                             Explore Directory
                             <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
-                        <Button size="lg" variant="outline" onClick={() => navigate("/update-profile")}> 
+                        <Button size="lg" variant="outline" onClick={() => navigate("/profile")}> 
                             Update Profile
                         </Button>
                     </div>
@@ -323,7 +323,7 @@ useEffect(() => {
                                                 <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{alumni.location}</span>
                                             </div>
                                         </div>
-                                        <Button variant="ghost" size="sm">Connect</Button>
+                                        <Button variant="ghost" size="sm">View</Button>
                                     </div>
                                 ))}
                                 <Button variant="outline" className="w-full" onClick={() => navigate("/recent-alumnis")}>View All Alumni</Button>
@@ -365,7 +365,7 @@ useEffect(() => {
                 {/* Alumni Dialog */}
                 {selectedAlumni && (
                     <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                        <DialogContent className="sm:max-w-2xl w-full">
+                        <DialogContent className="w-full sm:max-w-xl max-h-[85vh] overflow-y-auto">
                             <DialogHeader>
                                 <div className="flex items-start space-x-4">
                                     <Avatar className="h-24 w-24 border-2 border-primary">
@@ -418,6 +418,9 @@ useEffect(() => {
                                 </div>
                             </div>
                             <div className="flex justify-end space-x-2">
+                                <Button variant="outline" className="bg-gradient-primary hover:opacity-90"> 
+                            Connect
+                        </Button>
                                 <Button variant="outline" onClick={() => setIsProfileOpen(false)}>Close</Button>
                             </div>
                         </DialogContent>

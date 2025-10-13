@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 // Assuming Firebase Auth is imported here
 import { auth } from "@/firebase"; 
+import { Link } from "react-router-dom";
 
 // ------------------ 💡 API DATA INTERFACES ------------------
 interface Mentor {
@@ -385,7 +386,7 @@ const Mentorship = () => {
                                                 </DialogTrigger>
                                                 <DialogContent className="sm:max-w-[500px]">
                                                     <DialogHeader>
-                                                        <DialogTitle>Request Mentorship from {mentor.name}</DialogTitle>
+                                                        <DialogTitle>Request Mentorship to {mentor.name}</DialogTitle>
                                                         <DialogDescription>
                                                             Send a personalized message explaining what you'd like to learn and your goals.
                                                         </DialogDescription>
@@ -530,9 +531,11 @@ const Mentorship = () => {
                                 </div>
 
                                 <div className="text-center">
-                                    <Button size="lg" className="bg-gradient-primary hover:opacity-90">
+                                    <Link to="/apply-to-mentor">
+                                    <Button size="lg" className="bg-gradient-primary hover:opacity-90" >
                                         Apply to Become a Mentor
                                     </Button>
+                                    </Link>
                                     <p className="text-sm text-muted-foreground mt-2">
                                         Application review typically takes 2-3 business days
                                     </p>
@@ -544,7 +547,7 @@ const Mentorship = () => {
 
                 {selectedMentor && (
                 <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                    <DialogContent className="sm:max-w-2xl w-full">
+                    <DialogContent className="w-full sm:max-w-xl max-h-[85vh] overflow-y-auto">
                         <DialogHeader>
                             <div className="flex items-start space-x-4">
                                 <Avatar className="h-24 w-24 border-2 border-primary">

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,13 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Users } from "lucide-react";
 import networkingIllustration from "@/assets/networking-illustration.jpg";
 import { useNavigate } from "react-router-dom";
-
-// Firebase imports
 import { auth, db } from "@/firebase";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
 export const AuthCard = () => {
@@ -26,7 +23,6 @@ export const AuthCard = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       if (isSignUp) {
         if (password !== confirmPassword) {
@@ -35,19 +31,12 @@ export const AuthCard = () => {
           return;
         }
 
-        // 🔹 Create new user
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // 🔹 Store profile with default fields
         await setDoc(doc(db, "users", user.uid), {
           email: user.email,
           createdAt: new Date(),
-          // Default profile fields
           availability: "",
           avatarUrl: "",
           batch: "",
@@ -66,16 +55,9 @@ export const AuthCard = () => {
           title: "",
         });
 
-        console.log("✅ User signed up and profile created:", user);
         navigate("/complete-profile");
       } else {
-        // 🔹 Sign in existing user
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-        console.log("✅ User signed in:", userCredential.user);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
         navigate("/dashboard");
       }
     } catch (error: any) {
@@ -87,52 +69,44 @@ export const AuthCard = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-hero relative overflow-hidden">
-      {/* Background overlay */}
-      <div className="absolute inset-0 bg-gradient-glow animate-glow" />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-background via-background/90 to-background relative overflow-hidden">
+      {/* Subtle animated background glow */}
+      <div className="absolute inset-0 bg-gradient-glow opacity-50 animate-glow" />
 
-      {/* Glass card container */}
-      <div
-        className="glass-card rounded-2xl w-full max-w-3xl overflow-hidden animate-fade-in-up relative z-10"
-        style={{
-          backdropFilter: "blur(20px)",
-          background: "rgba(45, 20, 76, 0.1)",
-          border: "1px solid rgba(147, 51, 234, 0.2)",
-        }}
-      >
-        <div className="flex flex-col lg:flex-row min-h-[500px]">
-          {/* Left side (Image + text) */}
-          <div className="flex-1 bg-gradient-primary relative flex items-center justify-center">
-            <div className="absolute inset-0 bg-gradient-glow opacity-40" />
-            <div className="relative z-10 p-8 lg:p-12 text-center flex flex-col items-center justify-center">
-              <img
-                src={networkingIllustration}
-                alt="Alumni Networking Platform"
-                className="w-full max-w-md mx-auto opacity-90 rounded-xl mb-8"
-                style={{
-                  filter: "drop-shadow(0 10px 30px rgba(147, 51, 234, 0.4))",
-                }}
-              />
-              <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-                Hello! 👋
-              </h1>
-              <p className="text-lg max-w-md text-center bg-clip-text text-transparent bg-gradient-to-r from-white/40 via-white/70 to-white/40 animate-pulse mb-4">
-                Connect with your alumni network and build meaningful professional relationships
-              </p>
-              <div className="flex items-center gap-2 text-primary-foreground/80">
-                <Users className="w-5 h-5" />
-                <span className="text-sm font-medium">Join 10,000+ Alumni</span>
-              </div>
+      {/* Auth Container */}
+      <div className="relative z-10 w-full max-w-5xl rounded-3xl shadow-2xl glass-card overflow-hidden animate-fade-in-up border border-primary/20">
+        <div className="flex flex-col lg:flex-row">
+          {/* Left Pane — Illustration */}
+          <div className="flex-1 bg-gradient-primary flex flex-col items-center justify-center p-10 relative">
+            <div className="absolute inset-0 bg-gradient-glow opacity-30 animate-pulse" />
+            <img
+              src={networkingIllustration}
+              alt="Networking Illustration"
+              className="w-full max-w-md mx-auto rounded-2xl shadow-lg mb-8 opacity-95"
+              style={{
+                filter: "drop-shadow(0 10px 30px rgba(147, 51, 234, 0.4))",
+              }}
+            />
+            <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-3">
+              {isSignUp ? "Join Us 👋" : "Welcome Back 👋"}
+            </h1>
+            <p className="text-base text-primary-foreground/80 max-w-md text-center mb-4">
+              {isSignUp
+                ? "Create your alumni account and start connecting with your network."
+                : "Sign in to continue growing your alumni connections."}
+            </p>
+            <div className="flex items-center gap-2 text-primary-foreground/70 mt-2">
+              <Users className="w-5 h-5" />
+              <span className="text-sm font-medium">10,000+ Alumni Connected</span>
             </div>
           </div>
 
-          {/* Right side (Form) */}
-          <div className="flex-1 bg-background/10 p-8 lg:p-12 flex flex-col justify-center">
-            <div className="w-full max-w-md mx-auto space-y-8">
-              {/* Header */}
-              <div className="text-center space-y-3">
-                <h2 className="text-3xl font-bold text-foreground">
-                  {isSignUp ? "Create Account" : "Welcome Back"}
+          {/* Right Pane — Form */}
+          <div className="flex-1 p-10 bg-background/60 backdrop-blur-md">
+            <div className="max-w-md mx-auto">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-foreground mb-2">
+                  {isSignUp ? "Create Account" : "Sign In"}
                 </h2>
                 <p className="text-muted-foreground">
                   {isSignUp
@@ -141,13 +115,10 @@ export const AuthCard = () => {
                 </p>
               </div>
 
-              {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Email */}
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground font-medium">
-                    Email Address
-                  </Label>
+                  <Label htmlFor="email">Email Address</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
@@ -164,9 +135,7 @@ export const AuthCard = () => {
 
                 {/* Password */}
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-foreground font-medium">
-                    Password
-                  </Label>
+                  <Label htmlFor="password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
@@ -181,7 +150,7 @@ export const AuthCard = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
                     >
                       {showPassword ? (
                         <EyeOff className="w-5 h-5" />
@@ -192,12 +161,10 @@ export const AuthCard = () => {
                   </div>
                 </div>
 
-                {/* Confirm Password */}
+                {/* Confirm Password (Signup only) */}
                 {isSignUp && (
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-foreground font-medium">
-                      Confirm Password
-                    </Label>
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                       <Input
@@ -218,19 +185,18 @@ export const AuthCard = () => {
                   <div className="text-right">
                     <button
                       type="button"
-                      className="text-sm text-primary hover:text-primary-glow transition-colors"
+                      className="text-sm text-primary hover:text-primary-glow transition"
                     >
                       Forgot password?
                     </button>
                   </div>
                 )}
 
-                {/* Submit Button */}
+                {/* Submit */}
                 <Button
                   type="submit"
-                  variant="gradient"
                   size="lg"
-                  className="w-full py-4 font-semibold text-lg"
+                  className="w-full bg-gradient-primary hover:opacity-90 text-lg font-semibold py-4 transition-all duration-200"
                   disabled={loading}
                 >
                   {loading
@@ -242,7 +208,7 @@ export const AuthCard = () => {
                 </Button>
 
                 {/* Toggle Mode */}
-                <div className="text-center">
+                <div className="text-center pt-2">
                   <span className="text-sm text-muted-foreground">
                     {isSignUp
                       ? "Already have an account? "
@@ -251,7 +217,7 @@ export const AuthCard = () => {
                   <button
                     type="button"
                     onClick={() => setIsSignUp(!isSignUp)}
-                    className="text-sm text-primary hover:text-primary-glow font-medium transition-colors"
+                    className="text-sm text-primary hover:text-primary-glow font-medium transition"
                   >
                     {isSignUp ? "Sign In" : "Create Account"}
                   </button>

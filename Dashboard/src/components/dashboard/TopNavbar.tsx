@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Search, Bell, Moon, Sun, User, Calendar, MessageSquare, Briefcase, GraduationCap } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-// 💡 FIX: Added missing Card component and Dropdown Menu components
 import { Card } from '@/components/ui/card';
 import {
     DropdownMenu,
@@ -26,7 +25,7 @@ interface SearchResult {
 interface TopNavbarProps {
     sidebarCollapsed: boolean;
     darkMode: boolean;
-    onToggleDarkMode: () => void;
+    onToggleDarkMode: () => void; // This function is responsible for changing the theme state
 }
 
 // 💡 FIX: cn utility function definition (assumed implementation)
@@ -34,7 +33,6 @@ function cn(...classes: string[]) {
     return classes.filter(Boolean).join(' ');
 }
 
-// NOTE: This URL must be defined in your FE's .env file (e.g., VITE_API_GLOBAL_SEARCH=http://localhost:5000/api/search/global)
 const SEARCH_API = import.meta.env.VITE_API_GLOBAL_SEARCH || 'http://localhost:5000/api/search/global';
 
 
@@ -158,13 +156,15 @@ export function TopNavbar({ sidebarCollapsed, darkMode, onToggleDarkMode }: TopN
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-4">
-                    {/* Dark Mode Toggle */}
+                    {/* Dark Mode Toggle - Icon logic ensures proper display for white/dark background */}
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={onToggleDarkMode}
                         className="hover:glow-effect"
                     >
+                        {/* 💡 If darkMode is TRUE (dark theme), show SUN (to switch to light/white theme) */}
+                        {/* 💡 If darkMode is FALSE (light theme/white background), show MOON (to switch to dark theme) */}
                         {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                     </Button>
 

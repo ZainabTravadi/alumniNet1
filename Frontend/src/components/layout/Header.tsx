@@ -41,7 +41,7 @@ const Header = () => {
   const location = useLocation();
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: Users },
+    { name: 'Dashboard', href: '/dashboard', icon: Users },
     { name: 'Directory', href: '/directory', icon: Users },
     { name: 'Events', href: '/events', icon: Calendar },
     { name: 'Forums', href: '/forums', icon: MessageSquare },
