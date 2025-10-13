@@ -5,333 +5,293 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-    MessageSquare, Plus, Search, Heart, Reply, Eye, Clock, Users, Pin, Flame, TrendingUp, Loader2
+  MessageSquare, Plus, Search, Heart, Reply, Eye, Clock, Users, Pin, Flame, TrendingUp, Loader2
 } from 'lucide-react';
-
-// ------------------ 💡 FIREBASE INTEGRATION ------------------
-import { db, auth } from '@/firebase'; 
-import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore'; 
+import { useNavigate } from 'react-router-dom';
+import { db, auth } from '@/firebase';
+import { 
+  collection, getDocs, query, orderBy, Timestamp, addDoc, serverTimestamp 
+} from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const FORUM_THREADS_COLLECTION = 'forum_threads';
 const FORUM_CATEGORIES_COLLECTION = 'forum_categories';
 const USERS_COLLECTION = 'users';
 
-// ------------------ 💡 DATA INTERFACES ------------------
-
 interface ForumCategory {
-    // We use the 'name' field for lookup since it holds the unique value
-    id: string; 
-    name: string; // The filterable/displayable name (e.g., 'Career & Jobs')
-    count: number;
-    color: string; 
+  id: string;
+  name: string;
+  count: number;
+  color: string;
 }
 
 interface ForumThread {
-    id: number | string;
-    title: string;
-    author: string; // Mapped from authorName
-    authorAvatar: string;
-    // ⭐️ This is the exact value from the Firestore 'categoryId' field ⭐️
-    category: string; 
-    replies: number; // Mapped from repliesCount
-    views: number; // Mapped from viewsCount
-    likes: number; // Mapped from likesCount
-    lastActivity: string; // Time difference string for display
-    isPinned: boolean;
-    isHot: boolean;
-    content: string;
-    lastActivityTimestamp: Date; // Converted from Firestore Timestamp
+  id: number | string;
+  title: string;
+  author: string;
+  authorAvatar: string;
+  category: string;
+  replies: number;
+  views: number;
+  likes: number;
+  lastActivity: string;
+  isPinned: boolean;
+  isHot: boolean;
+  content: string;
+  lastActivityTimestamp: Date;
 }
 
 interface ForumStats {
-    activeMembers: number;
-    thisWeekPosts: number;
+  activeMembers: number;
+  thisWeekPosts: number;
 }
 
-
 const Forums = () => {
-    const [activeTab, setActiveTab] = useState('all');
-    const [searchTerm, setSearchTerm] = useState('');
-    
-    // New Post States (Placeholder/Future Implementation)
-    const [isNewPostOpen, setIsNewPostOpen] = useState(false);
-    const [newPostTitle, setNewPostTitle] = useState('');
-    const [newPostContent, setNewPostContent] = useState('');
-    const [newPostCategory, setNewPostCategory] = useState('');
-    
-    // 💡 STATE FOR LIVE DATA
-    const [categories, setCategories] = useState<ForumCategory[]>([]);
-    const [discussions, setDiscussions] = useState<ForumThread[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [forumStats, setForumStats] = useState<ForumStats>({ activeMembers: 0, thisWeekPosts: 0 });
-    const [trendingTopics, setTrendingTopics] = useState<{ topic: string, count: number }[]>([]);
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+  const [isNewPostOpen, setIsNewPostOpen] = useState(false);
+  const [newPostTitle, setNewPostTitle] = useState('');
+  const [newPostContent, setNewPostContent] = useState('');
+  const [newPostCategory, setNewPostCategory] = useState('');
+  const [categories, setCategories] = useState<ForumCategory[]>([]);
+  const [discussions, setDiscussions] = useState<ForumThread[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPosting, setIsPosting] = useState(false);
+  const [forumStats, setForumStats] = useState<ForumStats>({ activeMembers: 0, thisWeekPosts: 0 });
+  const [trendingTopics, setTrendingTopics] = useState<{ topic: string, count: number }[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // Watch Authentication
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsub();
+  }, []);
 
-    // ------------------ UTILITIES ------------------
+  const formatTimeAgo = (date: Date): string => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
 
-    const formatTimeAgo = (date: Date): string => {
-        const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-        if (seconds < 60) return `${seconds} seconds ago`;
-        const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes} minutes ago`;
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours} hours ago`;
-        const days = Math.floor(hours / 24);
-        return `${days} days ago`;
-    };
+  const getCategoryColor = useCallback((categoryDisplayValue: string) => {
+    const category = categories.find(cat => cat.name === categoryDisplayValue);
+    return category?.color || 'bg-gray-500';
+  }, [categories]);
 
-    const getCategoryName = useCallback((categoryName: string) => {
-        // Since categoryName is the display value, we just return it.
-        return categoryName;
-    }, []);
+  const totalPosts = useMemo(() => discussions.length, [discussions]);
 
-    // ⭐️ FIX: Category Color Utility matches thread's category value against category.name ⭐️
-    const getCategoryColor = useCallback((categoryDisplayValue: string) => {
-        // Find the color based on the exact category name/ID stored in the thread
-        const category = categories.find(cat => cat.name === categoryDisplayValue);
-        
-        return category?.color || 'bg-gray-500';
-    }, [categories]);
+  const calculateTrendingTopics = (threads: ForumThread[]) => {
+    const keywordCounts: { [key: string]: number } = {};
+    const commonWords = new Set(['the','and','a','is','of','to','in','for','on','at','by']);
+    threads.forEach(thread => {
+      const text = `${thread.title} ${thread.content}`.toLowerCase();
+      const words = text.match(/\b\w{4,}\b/g) || [];
+      words.forEach(word => {
+        if (!commonWords.has(word)) keywordCounts[word] = (keywordCounts[word] || 0) + 1;
+      });
+    });
+    return Object.keys(keywordCounts)
+      .map(k => ({ topic: k, count: keywordCounts[k] }))
+      .sort((a,b)=>b.count-a.count)
+      .slice(0,5);
+  };
 
-    const totalPosts = useMemo(() => {
-        return discussions.length;
-    }, [discussions]);
-    
-    const calculateTrendingTopics = (threads: ForumThread[]) => {
-        const keywordCounts: { [key: string]: number } = {};
-        const commonWords = new Set(['the', 'and', 'a', 'is', 'of', 'to', 'in', 'at', 'i', 'for', 'it', 'on', 'what', 'some', 'about', 'this', 'that', 'with']);
-        
-        threads.forEach(thread => {
-            const text = `${thread.title} ${thread.content}`.toLowerCase();
-            const words = text.match(/\b\w{4,}\b/g) || []; 
+  const filteredDiscussions = useMemo(() => {
+    let list = discussions;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      list = list.filter(d => d.title.toLowerCase().includes(term) || d.content.toLowerCase().includes(term));
+    }
+    if (activeTab !== 'all') list = list.filter(d => d.category === activeTab);
+    list.sort((a,b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return b.lastActivityTimestamp.getTime() - a.lastActivityTimestamp.getTime();
+    });
+    return list;
+  }, [discussions, searchTerm, activeTab]);
 
-            words.forEach(word => {
-                if (!commonWords.has(word)) {
-                    keywordCounts[word] = (keywordCounts[word] || 0) + 1;
-                }
-            });
+  const fetchForumData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const threadsCollection = collection(db, FORUM_THREADS_COLLECTION);
+      const categoriesCollection = collection(db, FORUM_CATEGORIES_COLLECTION);
+      const usersCollection = collection(db, USERS_COLLECTION);
+      const [threadsSnapshot, categoriesSnapshot, usersSnapshot] = await Promise.all([
+        getDocs(query(threadsCollection, orderBy('lastActivity', 'desc'))),
+        getDocs(categoriesCollection),
+        getDocs(usersCollection)
+      ]);
+
+      const fetchedCategories: ForumCategory[] = categoriesSnapshot.docs.map(doc => {
+        const data = doc.data() as any;
+        return {
+          id: data.name || doc.id,
+          name: data.name || doc.id,
+          count: data.count || 0,
+          color: data.color || 'bg-gray-500',
+        };
+      });
+      setCategories(fetchedCategories);
+
+      const fetchedThreads: ForumThread[] = [];
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      let thisWeekCount = 0;
+      threadsSnapshot.docs.forEach(doc => {
+        const data = doc.data() as any;
+        const lastActivityDate = data.lastActivity ? data.lastActivity.toDate() : new Date();
+        if (lastActivityDate > oneWeekAgo) thisWeekCount++;
+        fetchedThreads.push({
+          id: doc.id,
+          title: data.title || 'Untitled',
+          author: data.authorName || 'Anonymous',
+          authorAvatar: data.authorAvatar || '/placeholder-avatar.jpg',
+          category: data.categoryId || 'General',
+          replies: data.repliesCount || 0,
+          views: data.viewsCount || 0,
+          likes: data.likesCount || 0,
+          isPinned: data.isPinned || false,
+          isHot: data.isHot || false,
+          content: data.content || '',
+          lastActivityTimestamp: lastActivityDate,
+          lastActivity: formatTimeAgo(lastActivityDate),
         });
+      });
 
-        const sortedKeywords = Object.keys(keywordCounts)
-            .map(key => ({ topic: key, count: keywordCounts[key] }))
-            .sort((a, b) => b.count - a.count);
+      setDiscussions(fetchedThreads);
+      setTrendingTopics(calculateTrendingTopics(fetchedThreads));
+      setForumStats({ activeMembers: usersSnapshot.docs.length, thisWeekPosts: thisWeekCount });
+    } catch (error) {
+      console.error("Firestore error:", error);
+      setCategories([]); setDiscussions([]); setForumStats({ activeMembers: 0, thisWeekPosts: 0 });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-        return sortedKeywords.slice(0, 5);
-    };
+  useEffect(() => { fetchForumData(); }, [fetchForumData]);
 
-
-    // 💡 FILTERING LOGIC 
-    const filteredDiscussions = useMemo(() => {
-        let list = discussions;
-
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            list = list.filter(discussion => 
-                discussion.title.toLowerCase().includes(term) ||
-                discussion.content.toLowerCase().includes(term)
-            );
-        }
-
-        if (activeTab !== 'all') {
-             // ⭐️ Filtering must use the exact category name saved in Firestore ⭐️
-             list = list.filter(discussion => discussion.category === activeTab);
-        }
-        
-        list.sort((a, b) => {
-            if (a.isPinned && !b.isPinned) return -1;
-            if (!a.isPinned && b.isPinned) return 1;
-            return b.lastActivityTimestamp.getTime() - a.lastActivityTimestamp.getTime();
-        });
-
-        return list;
-    }, [discussions, searchTerm, activeTab]);
-
-    // ------------------ 🚀 FIREBASE DATA FETCHING ------------------
-    const fetchForumData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const threadsCollection = collection(db, FORUM_THREADS_COLLECTION);
-            const categoriesCollection = collection(db, FORUM_CATEGORIES_COLLECTION);
-            const usersCollection = collection(db, USERS_COLLECTION);
-
-            const [threadsSnapshot, categoriesSnapshot, usersSnapshot] = await Promise.all([
-                getDocs(query(threadsCollection, orderBy('lastActivity', 'desc'))),
-                getDocs(categoriesCollection),
-                getDocs(usersCollection)
-            ]);
-
-            // --- 1. PROCESS CATEGORIES ---
-            const fetchedCategories: ForumCategory[] = categoriesSnapshot.docs.map(doc => {
-                const data = doc.data() as any;
-                return {
-                    // Use the category name as the unique ID for filtering/display consistency
-                    id: data.name || doc.id, 
-                    name: data.name || doc.id, 
-                    count: data.count || 0,
-                    color: data.color || 'bg-gray-500',
-                };
-            });
-            
-            setCategories(fetchedCategories);
-
-            // --- 2. PROCESS THREADS & STATS ---
-            const fetchedThreads: ForumThread[] = [];
-            const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            let thisWeekCount = 0;
-
-            threadsSnapshot.docs.forEach(doc => {
-                const data = doc.data() as any;
-                const lastActivityDate = data.lastActivity ? data.lastActivity.toDate() : new Date();
-
-                if (lastActivityDate > oneWeekAgo) {
-                    thisWeekCount++;
-                }
-                
-                // ⭐️ CRITICAL FIX: Use the 'categoryId' field (which holds the display name) ⭐️
-                const threadCategory = data.categoryId || 'General'; 
-                
-                fetchedThreads.push({
-                    id: doc.id,
-                    title: data.title || 'Untitled',
-                    author: data.authorName || 'Anonymous',
-                    authorAvatar: data.authorAvatar || '/placeholder-avatar.jpg',
-                    category: threadCategory, 
-                    replies: data.repliesCount || 0,
-                    views: data.viewsCount || 0,
-                    likes: data.likesCount || 0,
-                    isPinned: data.isPinned || false,
-                    isHot: data.isHot || false,
-                    content: data.content || '',
-                    lastActivityTimestamp: lastActivityDate,
-                    lastActivity: formatTimeAgo(lastActivityDate),
-                } as ForumThread);
-            });
-            
-            setDiscussions(fetchedThreads);
-            setTrendingTopics(calculateTrendingTopics(fetchedThreads));
-
-            // 3. Update Final Stats
-            setForumStats({
-                activeMembers: usersSnapshot.docs.length,
-                thisWeekPosts: thisWeekCount,
-            });
-
-
-        } catch (error) {
-            console.error("Firestore error fetching forum data:", error);
-            setCategories([]);
-            setDiscussions([]);
-            setForumStats({ activeMembers: 0, thisWeekPosts: 0 });
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchForumData();
-    }, [fetchForumData]);
-
-    // ------------------ POST HANDLER (Placeholder) ------------------
-    const handleNewPostPlaceholder = () => {
-        alert('New post functionality is pending user profile implementation.');
-    };
-    
-    // ------------------ RENDER ------------------
-    if (isLoading) {
-        return (
-            <div className="text-center mt-20">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                <p className="text-lg text-primary mt-2">Loading forum data...</p>
-            </div>
-        );
+  // ✅ Handle New Post Creation
+  const handleNewPost = async () => {
+    if (!currentUser) {
+      alert('Please log in to post a discussion.');
+      return;
+    }
+    if (!newPostTitle.trim() || !newPostContent.trim() || !newPostCategory.trim()) {
+      alert('Please fill all fields.');
+      return;
     }
 
-    const finalTrendingTopics = trendingTopics.length > 0 ? trendingTopics : [
-        { topic: 'Remote Work Tips', count: 45 }, { topic: 'Career Transitions', count: 38 },
-        { topic: 'Networking Events', count: 32 }, { topic: 'Alumni Mentorship', count: 28 },
-    ];
+    try {
+      setIsPosting(true);
+      await addDoc(collection(db, FORUM_THREADS_COLLECTION), {
+        title: newPostTitle,
+        content: newPostContent,
+        categoryId: newPostCategory,
+        authorId: currentUser.uid,
+        authorName: currentUser.displayName || 'Anonymous',
+        authorAvatar: currentUser.photoURL || '/placeholder-avatar.jpg',
+        repliesCount: 0,
+        viewsCount: 0,
+        likesCount: 0,
+        isPinned: false,
+        isHot: false,
+        lastActivity: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      });
+      setIsNewPostOpen(false);
+      setNewPostTitle('');
+      setNewPostContent('');
+      setNewPostCategory('');
+      await fetchForumData();
+    } catch (error) {
+      console.error('Error creating discussion:', error);
+      alert('Failed to create discussion.');
+    } finally {
+      setIsPosting(false);
+    }
+  };
 
+  const handleJoinDiscussion = (threadId: string | number) => navigate(`/forums/${threadId}`);
 
+  if (isLoading) {
     return (
-        <div className="min-h-screen p-6">
-            <div className="max-w-7xl mx-auto space-y-8">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
-                    <div className="animate-fade-in">
-                        <h1 className="text-4xl md:text-5xl font-bold">
-                            Alumni{' '}
-                            <span className="bg-gradient-to-r from-primary via-primary to-primary-foreground bg-clip-text text-transparent">
-                                Forums
-                            </span>
-                        </h1>
-                        <p className="text-xl text-muted-foreground mt-2">
-                            Connect through discussions, share experiences, and build lasting relationships
-                        </p>
-                    </div>
-                    
-                    {/* New Discussion Button (Placeholder Logic, Open Dialog) */}
-                    <Dialog open={isNewPostOpen} onOpenChange={setIsNewPostOpen}>
-                        <DialogTrigger asChild>
-                            <Button size="lg" className="bg-gradient-primary hover:opacity-90">
-                                <Plus className="h-4 w-4 mr-2" />
-                                New Discussion
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[600px]">
-                            <DialogHeader>
-                                <DialogTitle>Start a New Discussion</DialogTitle>
-                                <DialogDescription>
-                                    Share your thoughts, ask questions, or start a conversation with your fellow alumni.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="category">Category</Label>
-                                    <Select onValueChange={setNewPostCategory} value={newPostCategory}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a category" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {categories.map((category) => (
-                                                // Use the category name (e.g., 'Career & Jobs') as the value for the form submission
-                                                <SelectItem key={category.id} value={category.name}> 
-                                                    {category.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="title">Title</Label>
-                                    <Input id="title" placeholder="What's your discussion about?" value={newPostTitle} onChange={(e) => setNewPostTitle(e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="content">Content</Label>
-                                    <Textarea 
-                                        id="content" 
-                                        placeholder="Share your thoughts..." 
-                                        className="min-h-[120px]"
-                                        value={newPostContent} 
-                                        onChange={(e) => setNewPostContent(e.target.value)}
-                                    />
-                                </div>
-                                <div className="flex justify-end space-x-2">
-                                    <Button variant="outline" onClick={() => setIsNewPostOpen(false)}>
-                                        Cancel
-                                    </Button>
-                                    <Button onClick={handleNewPostPlaceholder}>
-                                        Post Discussion
-                                    </Button>
-                                </div>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+      <div className="text-center mt-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+        <p className="text-lg text-primary mt-2">Loading forum data...</p>
+      </div>
+    );
+  }
+
+  const finalTrendingTopics = trendingTopics.length > 0
+    ? trendingTopics
+    : [{ topic: 'Remote Work', count: 45 }, { topic: 'Career Growth', count: 38 }];
+
+  // --- RETURN JSX (unchanged UI) ---
+  return (
+    <div className="min-h-screen p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold">
+              Alumni <span className="bg-gradient-to-r from-primary via-primary to-primary-foreground bg-clip-text text-transparent">Forums</span>
+            </h1>
+            <p className="text-xl text-muted-foreground mt-2">Connect through discussions, share experiences, and build lasting relationships</p>
+          </div>
+
+          {/* ✅ WORKING NEW DISCUSSION BUTTON */}
+          <Dialog open={isNewPostOpen} onOpenChange={setIsNewPostOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="bg-gradient-primary hover:opacity-90">
+                <Plus className="h-4 w-4 mr-2" /> New Discussion
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Start a New Discussion</DialogTitle>
+                <DialogDescription>Share your thoughts with fellow alumni.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select onValueChange={setNewPostCategory} value={newPostCategory}>
+                    <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input value={newPostTitle} onChange={e=>setNewPostTitle(e.target.value)} placeholder="What's your discussion about?" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Content</Label>
+                  <Textarea value={newPostContent} onChange={e=>setNewPostContent(e.target.value)} placeholder="Share your thoughts..." className="min-h-[120px]" />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={()=>setIsNewPostOpen(false)}>Cancel</Button>
+                  <Button onClick={handleNewPost} disabled={isPosting}>
+                    {isPosting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Post Discussion"}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
 
                 {/* Search & Stats */}
                 <div className="grid lg:grid-cols-4 gap-6 animate-slide-up">
@@ -444,9 +404,13 @@ const Forums = () => {
                                                                 <span>{discussion.lastActivity}</span>
                                                             </div>
                                                         </div>
-                                                        <Button variant="outline" size="sm">
-                                                            Join Discussion
-                                                        </Button>
+                                                         <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => handleJoinDiscussion(discussion.id)}
+                                            >
+                                                Join Discussion
+                                            </Button>
                                                     </div> 
                                                     
                                                     <p className="text-muted-foreground text-sm line-clamp-2">

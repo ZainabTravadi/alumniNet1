@@ -21,6 +21,7 @@ import { useState, useEffect } from "react";
 import FloatingRocket from "./components/ui/FloatingRocket";
 import EventDetailPage from "./pages/EventDetailPage";
 import Settings from "./pages/Settings";
+import DiscussionPage from "./pages/DiscussionPage";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,8 @@ const App = () => {
 
               {/* Chat Page (no scroll, fixed height) */}
               <Route path="/chat/:alumniId" element={<ChatPage />} />
+
+              <Route path="/forums/:threadId" element={<DiscussionPage />} /> 
 
               {/* Fallback */}
               <Route path="*" element={<NotFound />} />
