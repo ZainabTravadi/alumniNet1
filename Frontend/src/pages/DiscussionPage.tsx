@@ -13,6 +13,9 @@ import {
   serverTimestamp,
   updateDoc,
   increment,
+  Timestamp,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db, auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -38,31 +41,208 @@ import {
   Eye,
 } from "lucide-react";
 
+// --- CONSTANTS ---
 const FORUM_THREADS_COLLECTION = "forum_threads";
 const FORUM_REPLIES_COLLECTION = "thread_replies";
 
+// --- INTERFACES ---
 interface ReplyItem {
   id: string;
+  authorId: string;
   authorName: string;
   authorAvatar: string;
   content: string;
   likesCount: number;
+  likedBy: string[];
   createdAt: Date;
 }
 
 interface FullThread {
   id: string;
   title: string;
+  authorId: string;
   authorName: string;
   authorAvatar: string;
   category: string;
   content: string;
   viewsCount: number;
   likesCount: number;
+  likedBy: string[];
   repliesCount: number;
   createdAt: Date;
 }
 
+interface ThreadReplyNotificationData {
+  threadId: string;
+  threadTitle: string;
+  threadAuthorId: string;
+  replyAuthorId: string;
+  replyAuthorName: string;
+  replyAuthorAvatar: string;
+}
+
+interface ThreadLikeNotificationData {
+  threadId: string;
+  threadTitle: string;
+  threadAuthorId: string;
+  likerUserId: string;
+  likerUserName: string;
+  likerUserAvatar: string;
+}
+
+interface ReplyLikeNotificationData {
+  threadId: string;
+  replyId: string;
+  replyAuthorId: string;
+  replyContent: string;
+  likerUserId: string;
+  likerUserName: string;
+  likerUserAvatar: string;
+}
+
+// --- FORUM NOTIFICATION UTILITY FUNCTIONS ---
+const createForumReplyNotification = async (data: ThreadReplyNotificationData) => {
+  const {
+    threadAuthorId,
+    replyAuthorId,
+    replyAuthorName,
+    threadTitle,
+    threadId,
+    replyAuthorAvatar,
+  } = data;
+
+  if (threadAuthorId === replyAuthorId) {
+    console.log("Reply by thread author. Notification skipped.");
+    return;
+  }
+
+  const cleanTitle =
+    threadTitle.substring(0, 40) + (threadTitle.length > 40 ? "..." : "");
+
+  const notificationPayload = {
+    type: "forum",
+    category: "forums",
+    title: "New Reply in Your Discussion",
+    message: `${replyAuthorName} replied to your discussion: "${cleanTitle}"`,
+    avatar: replyAuthorAvatar || null,
+    timestamp: Timestamp.now(),
+    isRead: false,
+    actionable: true,
+    linkToId: threadId,
+    senderName: replyAuthorName,
+  };
+
+  try {
+    const notifCollectionRef = collection(
+      db,
+      "users",
+      threadAuthorId,
+      "notifications"
+    );
+    await addDoc(notifCollectionRef, notificationPayload);
+    console.log(
+      `✅ Forum reply notification sent to thread author (UID: ${threadAuthorId})`
+    );
+  } catch (error) {
+    console.error("❌ Error creating forum reply notification:", error);
+  }
+};
+
+const createThreadLikeNotification = async (data: ThreadLikeNotificationData) => {
+  const {
+    threadAuthorId,
+    likerUserId,
+    likerUserName,
+    threadTitle,
+    threadId,
+    likerUserAvatar,
+  } = data;
+
+  if (threadAuthorId === likerUserId) {
+    console.log("Self-like. Notification skipped.");
+    return;
+  }
+
+  const cleanTitle =
+    threadTitle.substring(0, 40) + (threadTitle.length > 40 ? "..." : "");
+
+  const notificationPayload = {
+    type: "forum",
+    category: "forums",
+    title: "Someone Liked Your Discussion",
+    message: `${likerUserName} liked your discussion: "${cleanTitle}"`,
+    avatar: likerUserAvatar || null,
+    timestamp: Timestamp.now(),
+    isRead: false,
+    actionable: true,
+    linkToId: threadId,
+    senderName: likerUserName,
+  };
+
+  try {
+    const notifCollectionRef = collection(
+      db,
+      "users",
+      threadAuthorId,
+      "notifications"
+    );
+    await addDoc(notifCollectionRef, notificationPayload);
+    console.log(
+      `✅ Thread like notification sent to thread author (UID: ${threadAuthorId})`
+    );
+  } catch (error) {
+    console.error("❌ Error creating thread like notification:", error);
+  }
+};
+
+const createReplyLikeNotification = async (data: ReplyLikeNotificationData) => {
+  const {
+    replyAuthorId,
+    likerUserId,
+    likerUserName,
+    replyContent,
+    threadId,
+    likerUserAvatar,
+  } = data;
+
+  if (replyAuthorId === likerUserId) {
+    console.log("Self-like on reply. Notification skipped.");
+    return;
+  }
+
+  const cleanContent =
+    replyContent.substring(0, 40) + (replyContent.length > 40 ? "..." : "");
+
+  const notificationPayload = {
+    type: "forum",
+    category: "forums",
+    title: "Someone Liked Your Reply",
+    message: `${likerUserName} liked your reply: "${cleanContent}"`,
+    avatar: likerUserAvatar || null,
+    timestamp: Timestamp.now(),
+    isRead: false,
+    actionable: true,
+    linkToId: threadId,
+    senderName: likerUserName,
+  };
+
+  try {
+    const notifCollectionRef = collection(
+      db,
+      "users",
+      replyAuthorId,
+      "notifications"
+    );
+    await addDoc(notifCollectionRef, notificationPayload);
+    console.log(
+      `✅ Reply like notification sent to reply author (UID: ${replyAuthorId})`
+    );
+  } catch (error) {
+    console.error("❌ Error creating reply like notification:", error);
+  }
+};
+
+// --- TIME FORMATTING UTILITY ---
 const formatTimeAgo = (date: Date): string => {
   const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
   if (seconds < 60) return `${seconds} seconds ago`;
@@ -74,6 +254,7 @@ const formatTimeAgo = (date: Date): string => {
   return `${days} days ago`;
 };
 
+// --- MAIN COMPONENT ---
 const DiscussionPage = () => {
   const { threadId } = useParams<{ threadId: string }>();
   const navigate = useNavigate();
@@ -83,8 +264,8 @@ const DiscussionPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [newReplyContent, setNewReplyContent] = useState("");
   const [isPostingReply, setIsPostingReply] = useState(false);
+  const [isLikingThread, setIsLikingThread] = useState(false);
 
-  // Logged in user info
   const [currentUser, setCurrentUser] = useState<{
     uid: string;
     name: string;
@@ -123,7 +304,7 @@ const DiscussionPage = () => {
     return () => unsubscribe();
   }, []);
 
-  // --- Fetch Thread Once ---
+  // --- Fetch Thread Once (and increment view count) ---
   const fetchThreadData = useCallback(async () => {
     if (!threadId) return;
     setIsLoading(true);
@@ -132,15 +313,21 @@ const DiscussionPage = () => {
       const threadSnap = await getDoc(threadRef);
       if (threadSnap.exists()) {
         const data = threadSnap.data();
+
+        // Increment view count
+        await updateDoc(threadRef, { viewsCount: increment(1) });
+
         const threadData: FullThread = {
           id: threadSnap.id,
           title: data.title || "Untitled",
+          authorId: data.authorId || "unknown",
           authorName: data.authorName || "Anonymous",
           authorAvatar: data.authorAvatar || "/placeholder-avatar.jpg",
           category: data.categoryId || "General",
           content: data.content || "",
-          viewsCount: data.viewsCount || 0,
+          viewsCount: (data.viewsCount || 0) + 1,
           likesCount: data.likesCount || 0,
+          likedBy: data.likedBy || [],
           repliesCount: data.repliesCount || 0,
           createdAt: data.createdAt?.toDate() || new Date(),
         };
@@ -149,7 +336,7 @@ const DiscussionPage = () => {
         setThread(null);
       }
     } catch (error) {
-      console.error("Error fetching thread:", error);
+      console.error("Error fetching thread or incrementing views:", error);
     } finally {
       setIsLoading(false);
     }
@@ -167,10 +354,12 @@ const DiscussionPage = () => {
         const data = docSnap.data();
         return {
           id: docSnap.id,
+          authorId: data.authorId || "unknown",
           authorName: data.authorName || "Anonymous",
           authorAvatar: data.authorAvatar || "/placeholder-avatar.jpg",
           content: data.content || "",
           likesCount: data.likesCount || 0,
+          likedBy: data.likedBy || [],
           createdAt: data.createdAt?.toDate() || new Date(),
         };
       });
@@ -184,27 +373,145 @@ const DiscussionPage = () => {
     fetchThreadData();
   }, [fetchThreadData]);
 
-  // --- Post New Reply ---
+  // --- Toggle Like Thread ---
+  const handleLikeThread = async () => {
+    if (!currentUser || !thread || !threadId) {
+      alert("Please sign in to like this discussion.");
+      return;
+    }
+
+    setIsLikingThread(true);
+    try {
+      const threadRef = doc(db, FORUM_THREADS_COLLECTION, threadId);
+      const hasLiked = thread.likedBy.includes(currentUser.uid);
+
+      if (hasLiked) {
+        // Unlike
+        await updateDoc(threadRef, {
+          likesCount: increment(-1),
+          likedBy: arrayRemove(currentUser.uid),
+        });
+        setThread({
+          ...thread,
+          likesCount: thread.likesCount - 1,
+          likedBy: thread.likedBy.filter((uid) => uid !== currentUser.uid),
+        });
+      } else {
+        // Like
+        await updateDoc(threadRef, {
+          likesCount: increment(1),
+          likedBy: arrayUnion(currentUser.uid),
+        });
+        setThread({
+          ...thread,
+          likesCount: thread.likesCount + 1,
+          likedBy: [...thread.likedBy, currentUser.uid],
+        });
+
+        // Send notification
+        await createThreadLikeNotification({
+          threadId: thread.id,
+          threadTitle: thread.title,
+          threadAuthorId: thread.authorId,
+          likerUserId: currentUser.uid,
+          likerUserName: currentUser.name,
+          likerUserAvatar: currentUser.avatar,
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling thread like:", error);
+      alert("Failed to like thread. Please try again.");
+    } finally {
+      setIsLikingThread(false);
+    }
+  };
+
+  // --- Toggle Like Reply ---
+  const handleLikeReply = async (reply: ReplyItem) => {
+    if (!currentUser || !threadId) {
+      alert("Please sign in to like this reply.");
+      return;
+    }
+
+    try {
+      const threadRef = doc(db, FORUM_THREADS_COLLECTION, threadId);
+      const replyRef = doc(threadRef, FORUM_REPLIES_COLLECTION, reply.id);
+      const hasLiked = reply.likedBy.includes(currentUser.uid);
+
+      if (hasLiked) {
+        // Unlike
+        await updateDoc(replyRef, {
+          likesCount: increment(-1),
+          likedBy: arrayRemove(currentUser.uid),
+        });
+      } else {
+        // Like
+        await updateDoc(replyRef, {
+          likesCount: increment(1),
+          likedBy: arrayUnion(currentUser.uid),
+        });
+
+        // Send notification
+        await createReplyLikeNotification({
+          threadId: threadId,
+          replyId: reply.id,
+          replyAuthorId: reply.authorId,
+          replyContent: reply.content,
+          likerUserId: currentUser.uid,
+          likerUserName: currentUser.name,
+          likerUserAvatar: currentUser.avatar,
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling reply like:", error);
+      alert("Failed to like reply. Please try again.");
+    }
+  };
+
+  // --- Post New Reply (with Notification Logic) ---
   const handlePostReply = async () => {
-    if (!newReplyContent.trim() || !threadId || !currentUser) return;
+    if (!newReplyContent.trim() || !threadId || !currentUser || !thread) {
+      alert(
+        "Cannot post reply. Please ensure you are signed in and the thread is fully loaded."
+      );
+      return;
+    }
 
     setIsPostingReply(true);
     try {
       const threadRef = doc(db, FORUM_THREADS_COLLECTION, threadId);
       const repliesRef = collection(threadRef, FORUM_REPLIES_COLLECTION);
 
+      // Add reply
       await addDoc(repliesRef, {
+        authorId: currentUser.uid,
         authorName: currentUser.name,
         authorAvatar: currentUser.avatar,
         content: newReplyContent.trim(),
         likesCount: 0,
+        likedBy: [],
         createdAt: serverTimestamp(),
       });
 
-      await updateDoc(threadRef, { repliesCount: increment(1) });
+      // Update thread counts
+      await updateDoc(threadRef, {
+        repliesCount: increment(1),
+        lastActivity: serverTimestamp(),
+      });
+
+      // Send notification
+      await createForumReplyNotification({
+        threadId: thread.id,
+        threadTitle: thread.title,
+        threadAuthorId: thread.authorId,
+        replyAuthorId: currentUser.uid,
+        replyAuthorName: currentUser.name,
+        replyAuthorAvatar: currentUser.avatar,
+      });
+
       setNewReplyContent("");
     } catch (error) {
-      console.error("Error posting reply:", error);
+      console.error("Error posting reply or sending notification:", error);
       alert("Failed to post reply. Check console for details.");
     } finally {
       setIsPostingReply(false);
@@ -227,6 +534,10 @@ const DiscussionPage = () => {
       </div>
     );
   }
+
+  const isThreadLikedByCurrentUser = currentUser
+    ? thread.likedBy.includes(currentUser.uid)
+    : false;
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
@@ -271,19 +582,33 @@ const DiscussionPage = () => {
           <p className="text-lg leading-relaxed text-foreground/90 whitespace-pre-wrap">
             {thread.content}
           </p>
-          <div className="flex items-center space-x-6 text-sm text-muted-foreground pt-4 border-t border-border">
-            <span className="flex items-center gap-1">
-              <Heart className="w-4 h-4 text-red-500" />
-              {thread.likesCount} Likes
-            </span>
-            <span className="flex items-center gap-1">
-              <Eye className="w-4 h-4" />
-              {thread.viewsCount} Views
-            </span>
-            <span className="flex items-center gap-1">
-              <Reply className="w-4 h-4" />
-              {thread.repliesCount} Replies
-            </span>
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+              <button
+                onClick={handleLikeThread}
+                disabled={isLikingThread || !currentUser}
+                className={`flex items-center gap-1 transition-colors ${
+                  isThreadLikedByCurrentUser
+                    ? "text-red-500"
+                    : "hover:text-red-500"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <Heart
+                  className={`w-4 h-4 ${
+                    isThreadLikedByCurrentUser ? "fill-current" : ""
+                  }`}
+                />
+                {thread.likesCount} {thread.likesCount === 1 ? "Like" : "Likes"}
+              </button>
+              <span className="flex items-center gap-1">
+                <Eye className="w-4 h-4" />
+                {thread.viewsCount} Views
+              </span>
+              <span className="flex items-center gap-1">
+                <Reply className="w-4 h-4" />
+                {thread.repliesCount} Replies
+              </span>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -308,7 +633,9 @@ const DiscussionPage = () => {
             </span>
             <Button
               onClick={handlePostReply}
-              disabled={!newReplyContent.trim() || isPostingReply || !currentUser}
+              disabled={
+                !newReplyContent.trim() || isPostingReply || !currentUser
+              }
             >
               {isPostingReply ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -324,32 +651,53 @@ const DiscussionPage = () => {
       {/* --- Replies List --- */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold">{replies.length} Replies</h2>
-        {replies.map((reply) => (
-          <Card key={reply.id} className="glass-card">
-            <CardContent className="p-4 flex items-start space-x-4">
-              <Avatar>
-                <AvatarImage src={reply.authorAvatar} />
-                <AvatarFallback>{reply.authorName[0]}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{reply.authorName}</span>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {formatTimeAgo(reply.createdAt)}
-                  </span>
+        {replies.map((reply) => {
+          const isReplyLikedByCurrentUser = currentUser
+            ? reply.likedBy.includes(currentUser.uid)
+            : false;
+
+          return (
+            <Card key={reply.id} className="glass-card">
+              <CardContent className="p-4 flex items-start space-x-4">
+                <Avatar>
+                  <AvatarImage src={reply.authorAvatar} />
+                  <AvatarFallback>{reply.authorName[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">{reply.authorName}</span>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatTimeAgo(reply.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-foreground/90">{reply.content}</p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2">
+                    <button
+                      onClick={() => handleLikeReply(reply)}
+                      disabled={!currentUser}
+                      className={`flex items-center gap-1 transition-colors ${
+                        isReplyLikedByCurrentUser
+                          ? "text-red-500"
+                          : "hover:text-primary"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      <Heart
+                        className={`w-3 h-3 ${
+                          isReplyLikedByCurrentUser ? "fill-current" : ""
+                        }`}
+                      />
+                      {reply.likesCount}
+                    </button>
+                    <span className="cursor-pointer hover:text-primary">
+                      Reply
+                    </span>
+                  </div>
                 </div>
-                <p className="text-foreground/90">{reply.content}</p>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2">
-                  <span className="flex items-center gap-1 cursor-pointer hover:text-primary">
-                    <Heart className="w-3 h-3" /> {reply.likesCount}
-                  </span>
-                  <span className="cursor-pointer hover:text-primary">Reply</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

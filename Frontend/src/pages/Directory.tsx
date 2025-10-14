@@ -12,8 +12,19 @@ import {
     Building2,
     GraduationCap,
     Linkedin as LinkedinIcon, // Corrected Deprecation
-    Mail
+    Mail, UserPlus
 } from 'lucide-react';
+import { 
+    collection, 
+    getDoc, 
+    query, 
+    where, 
+    Timestamp, 
+    doc, 
+    updateDoc, 
+    arrayUnion,
+    addDoc // <-- ADDED for creating the new notification document
+} from "firebase/firestore";
 
 // ------------------ 💡 Interface (Matching Firestore/Python structure) ------------------
 interface Alumnus {
@@ -28,6 +39,8 @@ interface Alumnus {
     skills: string[]; 
     linkedin: string; 
 }
+import { auth, db } from '@/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 // ------------------ 💡 Fallback Dummy Data ------------------
 const DUMMY_ALUMNI: Alumnus[] = [
@@ -48,8 +61,49 @@ const Directory = () => {
     
     const [alumniData, setAlumniData] = useState<Alumnus[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState<({
+        uid: string;
+        email: string;
+        displayName: string; // From Firestore /users collection
+        photoURL: string;    // From Firestore /users collection
+    }) | null>(null);
 
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL_DIRECTORY || 'http://localhost:5000/api/directory/alumni';
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const userRef = doc(db, "users", user.uid);
+                    const userSnap = await getDoc(userRef);
+
+                    if (userSnap.exists()) {
+                        const data = userSnap.data();
+                        setCurrentUser({
+                            uid: user.uid,
+                            email: user.email || 'N/A',
+                            // Prioritize displayName from Firestore, fallback to Auth email
+                            displayName: data.displayName || user.email || 'An Alumni', 
+                            photoURL: data.photoURL || user.photoURL || '/placeholder-avatar.jpg',
+                        });
+                    } else {
+                        // Fallback if /users document doesn't exist
+                         setCurrentUser({
+                            uid: user.uid,
+                            email: user.email || 'N/A',
+                            displayName: user.email || 'An Alumni', 
+                            photoURL: user.photoURL || '/placeholder-avatar.jpg',
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error fetching user profile from Firestore:", error);
+                    setCurrentUser(null);
+                }
+            } else {
+                setCurrentUser(null);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     // ------------------ 💡 Data Fetching (Full Directory) ------------------
     useEffect(() => {
@@ -136,6 +190,65 @@ const Directory = () => {
         triggerSearch(newBatch, newDepartment, searchTerm);
     };
 
+    // ------------------ 💡 Connection Handling Logic (New) ------------------
+    // ------------------ 💡 Connection Handling Logic ------------------
+    const handleConnectRequest = useCallback(async (alumnus: Alumnus) => {
+        const sender = currentUser;
+        const recipientId = alumnus.id;
+
+        if (!sender) {
+            alert('Please sign in to send a connection request.');
+            return;
+        }
+
+        if (typeof recipientId !== 'string') {
+            alert('Error: Recipient ID is invalid.');
+            return;
+        }
+
+        if (sender.uid === recipientId) {
+            alert('You cannot send a connection request to yourself.');
+            return;
+        }
+
+        // The senderName is now guaranteed to be the correct displayName or a reliable fallback
+        const senderName = sender.displayName; 
+
+        try {
+            // 1. Write Notification to Recipient's Subcollection
+            const recipientNotifCollectionRef = collection(db, "users", recipientId, "notifications");
+            
+            const notificationData = {
+                type: 'connection',
+                category: 'connections',
+                // 👇 CLEANER: Directly use the robust senderName
+                title: `New Connection Request from ${senderName}`,
+                message: `${senderName} would like to connect with you. Accept to finalize connection.`,
+                timestamp: Timestamp.now(), 
+                isRead: false,
+                actionable: true, 
+                linkToId: sender.uid, 
+                avatar: sender.photoURL, // Use the photoURL fetched from Firestore profile
+                senderName: senderName 
+            };
+            
+            await addDoc(recipientNotifCollectionRef, notificationData);
+
+            // 2. Update Sender's Profile to track the pending request (Unchanged logic)
+            const senderRef = doc(db, "users", sender.uid);
+            await updateDoc(senderRef, {
+                pendingSentRequests: arrayUnion(recipientId)
+            });
+
+            alert(`Connection request sent to ${alumnus.name}! Awaiting their approval.`);
+
+        } catch (err) {
+            console.error("❌ Error sending connection request:", err);
+            alert("Failed to send request. Check console for details.");
+        }
+    }, [currentUser]);
+
+
 
     // ------------------ RENDER LOGIC ------------------
 
@@ -143,9 +256,7 @@ const Directory = () => {
     const cardsToShow = hasSearched ? filteredAlumni : alumniData.slice(0, 6);
 
 
-    if (isLoading) {
-        return <p className="text-center mt-20 text-lg text-primary">Loading alumni directory...</p>;
-    }
+    
 
 
     return (
@@ -278,20 +389,35 @@ const Directory = () => {
                                                 ))}
                                             </div>
                                         </div>
-
-                                        <div className="flex gap-2 pt-2">
-                                            <Button size="sm" className="flex-1" onClick={() => navigate(`/chat/${alumnus.id}`)}>
+                                         <div className="flex gap-2 pt-2">
+                                            {/* NEW CONNECT BUTTON */}
+                                            <Button 
+                                                size="sm" 
+                                                className="flex-1"
+                                                onClick={(e) => { e.stopPropagation(); handleConnectRequest(alumnus); }}
+                                                disabled={!currentUser || alumnus.id === currentUser.uid} // Disable if not auth or connecting to self
+                                            >
+                                                <UserPlus className="h-3 w-3 mr-2" />
+                                                Connect
+                                            </Button>
+                                            
+                                            <Button 
+                                                size="sm" 
+                                                variant="outline" 
+                                                onClick={(e) => { e.stopPropagation(); navigate(`/chat/${alumnus.id}`); }} 
+                                                disabled={!currentUser}
+                                            >
                                                 <Mail className="h-3 w-3 mr-2" />
                                                 Message
                                             </Button>
+
                                             <Button 
                                                 size="sm" 
-                                                variant="outline"
-                                                onClick={() => alumnus.linkedin && window.open(alumnus.linkedin, '_blank')}
+                                                variant="secondary"
+                                                onClick={(e) => { e.stopPropagation(); alumnus.linkedin && window.open(alumnus.linkedin, '_blank'); }}
                                                 disabled={!alumnus.linkedin || alumnus.linkedin === '#'}
                                             >
-                                                <LinkedinIcon className="h-3 w-3 mr-2" />
-                                                LinkedIn
+                                                <LinkedinIcon className="h-3 w-3" />
                                             </Button>
                                         </div>
                                     </CardContent>

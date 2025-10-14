@@ -54,7 +54,7 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Globe,
+  Globe, Users
 } from "lucide-react";
 
 //
@@ -181,6 +181,7 @@ const [isSavingSkill, setIsSavingSkill] = useState(false);
   const [notifications, setNotifications] =
     useState<NotificationMap>(INITIAL_NOTIFICATIONS);
   const [privacy, setPrivacy] = useState<PrivacyMap>(INITIAL_PRIVACY);
+  const [connectionCount, setConnectionCount] = useState(0); 
 
   // career-add dialog state
   const [isCareerDialogOpen, setIsCareerDialogOpen] = useState(false);
@@ -223,11 +224,15 @@ const [isSavingSkill, setIsSavingSkill] = useState(false);
           setCareerHistory([]);
           setNotifications(INITIAL_NOTIFICATIONS);
           setPrivacy(INITIAL_PRIVACY);
+          setConnectionCount(0); 
           setIsLoading(false);
           return;
         }
 
         const data = snap.data();
+
+        const connections = Array.isArray(data.isConnectedTo) ? data.isConnectedTo : [];
+        setConnectionCount(connections.length);
 
         // Map profile safely (defensive)
         const mappedProfile: UserProfileState = {
@@ -521,16 +526,8 @@ const [isSavingSkill, setIsSavingSkill] = useState(false);
 };
 
 
-  //
-  // Loading / error UI
-  //
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-xl">
-        {currentUserId ? "Loading Profile Data..." : "Authenticating..."} ⏳
-      </div>
-    );
-  }
+  
+  
 
   if (error) {
     return (
@@ -597,62 +594,80 @@ const [isSavingSkill, setIsSavingSkill] = useState(false);
         </div>
 
         {/* Overview */}
-        <Card className="glass-card animate-slide-up">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
-              <div className="relative">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={profile.avatarUrl || "/placeholder-avatar.jpg"} />
-                  <AvatarFallback className="text-2xl">
-                    {(profile.firstName?.[0] ?? "?") + (profile.lastName?.[0] ?? "?")}
-                  </AvatarFallback>
-                </Avatar>
-                {isEditing && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
-                    onClick={() => alert("Avatar upload not implemented.")}
-                  >
-                    <Camera className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+<Card className="glass-card animate-slide-up p-6">
+  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
 
-              <div className="flex-1 space-y-2">
-                <h2 className="text-2xl font-bold">
-                  {profile.firstName} {profile.lastName}
-                </h2>
-                <p className="text-lg text-muted-foreground">{currentCareer.currentPosition}</p>
+    {/* Left Section — Profile */}
+    <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6 flex-1">
+      <div className="relative">
+        <Avatar className="h-24 w-24">
+          <AvatarImage src={profile.avatarUrl || "/placeholder-avatar.jpg"} />
+          <AvatarFallback className="text-2xl">
+            {(profile.firstName?.[0] ?? "?") + (profile.lastName?.[0] ?? "?")}
+          </AvatarFallback>
+        </Avatar>
+        {isEditing && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+            onClick={() => alert("Avatar upload not implemented.")}
+          >
+            <Camera className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
 
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Building2 className="h-4 w-4" />
-                    {currentCareer.currentCompany}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <GraduationCap className="h-4 w-4" />
-                    {profile.batch ? `Class of ${profile.batch}` : "Class year N/A"} • {profile.department || "Dept N/A"}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {profile.location || "Location N/A"}
-                  </span>
-                </div>
+      <div className="flex-1 space-y-2">
+        <h2 className="text-2xl font-bold">
+          {profile.firstName} {profile.lastName}
+        </h2>
+        <p className="text-lg text-muted-foreground">{currentCareer.currentPosition}</p>
 
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {profile.skills.slice(0, 4).map((skill) => (
-                    <Badge key={skill} variant="secondary">
-                      {skill}
-                    </Badge>
-                  ))}
-                  {profile.skills.length > 4 && <Badge variant="outline">+{profile.skills.length - 4} more</Badge>}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Building2 className="h-4 w-4" />
+            {currentCareer.currentCompany}
+          </span>
+          <span className="flex items-center gap-1">
+            <GraduationCap className="h-4 w-4" />
+            {profile.batch ? `Class of ${profile.batch}` : "Class year N/A"} • {profile.department || "Dept N/A"}
+          </span>
+          <span className="flex items-center gap-1">
+            <MapPin className="h-4 w-4" />
+            {profile.location || "Location N/A"}
+          </span>
+        </div>
 
+        <div className="flex flex-wrap gap-2 pt-2">
+          {profile.skills.slice(0, 4).map((skill) => (
+            <Badge key={skill} variant="secondary">
+              {skill}
+            </Badge>
+          ))}
+          {profile.skills.length > 4 && (
+            <Badge variant="outline">+{profile.skills.length - 4} more</Badge>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* Right Section — Connection Card */}
+    <Card className="glass-card w-full md:w-[250px] shrink-0">
+      <CardContent className="p-4 flex justify-between items-start">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">Total Connections</p>
+          <p className="text-3xl font-bold text-primary">
+            {connectionCount.toLocaleString()}
+          </p>
+        </div>
+        <Users className="h-8 w-8 text-primary" />
+      </CardContent>
+    </Card>
+  </div>
+</Card>
+
+        
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-scale-in">
           <TabsList className="grid w-full grid-cols-4">

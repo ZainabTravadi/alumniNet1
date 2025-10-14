@@ -14,7 +14,8 @@ import {
   BookOpen, 
   DollarSign,
   Settings,
-  User
+  User,
+  MessageCircle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 
+import { useNavigate } from 'react-router-dom'; 
 // 🔹 Firebase imports
 import { auth, db } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -39,6 +41,7 @@ const Header = () => {
   const [loadingUser, setLoadingUser] = useState(true); // 🔹 show loading while fetching user
   const searchRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Users },
@@ -69,6 +72,16 @@ const Header = () => {
 
     return () => unsubscribe();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      navigate("/auth"); // Redirect to the authentication route on successful sign-out
+    } catch (error) {
+      console.error("Error signing out:", error);
+      alert("Failed to log out. Please try again.");
+    }
+  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -172,6 +185,12 @@ const Header = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/chat" className="flex items-center">
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      <span>Messages</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/settings" className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
@@ -179,7 +198,7 @@ const Header = () => {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => auth.signOut()}
+                    onClick={handleLogout}
                     className="text-red-600"
                   >
                     Log out

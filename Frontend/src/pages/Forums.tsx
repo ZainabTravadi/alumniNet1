@@ -184,56 +184,65 @@ const Forums = () => {
   useEffect(() => { fetchForumData(); }, [fetchForumData]);
 
   // ✅ Handle New Post Creation
-  const handleNewPost = async () => {
+  // ... inside Forums component ...
+
+// ✅ Handle New Post Creation
+const handleNewPost = async () => {
     if (!currentUser) {
-      alert('Please log in to post a discussion.');
-      return;
+        alert('Please log in to post a discussion.');
+        return;
     }
     if (!newPostTitle.trim() || !newPostContent.trim() || !newPostCategory.trim()) {
-      alert('Please fill all fields.');
-      return;
+        alert('Please fill all fields.');
+        return;
     }
 
+    // 💡 FIX: Retrieve display name and photo URL from the current user object
+    const authorName = currentUser.displayName || currentUser.email || 'Anonymous User';
+    const authorAvatar = currentUser.photoURL || '/placeholder-avatar.jpg';
+
     try {
-      setIsPosting(true);
-      await addDoc(collection(db, FORUM_THREADS_COLLECTION), {
-        title: newPostTitle,
-        content: newPostContent,
-        categoryId: newPostCategory,
-        authorId: currentUser.uid,
-        authorName: currentUser.displayName || 'Anonymous',
-        authorAvatar: currentUser.photoURL || '/placeholder-avatar.jpg',
-        repliesCount: 0,
-        viewsCount: 0,
-        likesCount: 0,
-        isPinned: false,
-        isHot: false,
-        lastActivity: serverTimestamp(),
-        createdAt: serverTimestamp(),
-      });
-      setIsNewPostOpen(false);
-      setNewPostTitle('');
-      setNewPostContent('');
-      setNewPostCategory('');
-      await fetchForumData();
+        setIsPosting(true);
+        await addDoc(collection(db, FORUM_THREADS_COLLECTION), {
+            title: newPostTitle,
+            content: newPostContent,
+            categoryId: newPostCategory,
+            authorId: currentUser.uid,
+            
+            // 💡 FIX: Use dynamic name and avatar from currentUser
+            authorName: authorName, 
+            authorAvatar: authorAvatar,
+            
+            repliesCount: 0,
+            viewsCount: 0,
+            likesCount: 0,
+            isPinned: false,
+            isHot: false,
+            lastActivity: serverTimestamp(),
+            createdAt: serverTimestamp(),
+        });
+        
+        setIsNewPostOpen(false);
+        setNewPostTitle('');
+        setNewPostContent('');
+        setNewPostCategory('');
+        
+        // Refresh data to show the new post
+        await fetchForumData(); 
+        
     } catch (error) {
-      console.error('Error creating discussion:', error);
-      alert('Failed to create discussion.');
+        console.error('Error creating discussion:', error);
+        alert('Failed to create discussion.');
     } finally {
-      setIsPosting(false);
+        setIsPosting(false);
     }
-  };
+};
+
+// ... rest of the component
 
   const handleJoinDiscussion = (threadId: string | number) => navigate(`/forums/${threadId}`);
 
-  if (isLoading) {
-    return (
-      <div className="text-center mt-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-        <p className="text-lg text-primary mt-2">Loading forum data...</p>
-      </div>
-    );
-  }
+  
 
   const finalTrendingTopics = trendingTopics.length > 0
     ? trendingTopics

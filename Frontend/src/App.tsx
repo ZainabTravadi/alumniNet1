@@ -76,9 +76,7 @@ const App = () => {
               <Route path="/recent-alumnis" element={<RecentAlumniPage />} />
               <Route path="/events/:eventId" element={<EventDetailPage />} />
               <Route path="/apply-to-mentor" element={<MentorApplicationPage />} />
-
-
-              {/* Chat Page (no scroll, fixed height) */}
+              <Route path="/chat" element={<ChatPage />} /> 
               <Route path="/chat/:alumniId" element={<ChatPage />} />
 
               <Route path="/forums/:threadId" element={<DiscussionPage />} /> 

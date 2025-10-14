@@ -368,10 +368,7 @@ const Fundraising = () => {
     };
 
 
-    // ------------------ RENDER ------------------
-    if (isLoading) {
-        return <p className="text-center mt-20 text-lg text-primary">Loading fundraising campaigns...</p>;
-    }
+    
     
     return (
         <div className="min-h-screen p-6">

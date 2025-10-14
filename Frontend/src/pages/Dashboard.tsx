@@ -1,11 +1,26 @@
+// =================================================================================
+// DASHBOARD.tsx (Component where the "Connect" button is pressed)
+// =================================================================================
+
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from "react-router-dom";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 // 💡 CONFIRMED FIRESTORE IMPORTS
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { 
+    collection, 
+    getDocs, 
+    query, 
+    where, 
+    Timestamp, 
+    doc, 
+    updateDoc, 
+    arrayUnion,
+    addDoc // <-- ADDED for creating the new notification document
+} from "firebase/firestore";
 import { auth, db } from "@/firebase"; 
 
-// UI Imports
+// UI Imports (omitted for brevity, assume they are correct)
+// ...
 import { 
     Card, CardContent, CardDescription, CardHeader, CardTitle 
 } from '@/components/ui/card';
@@ -17,7 +32,6 @@ import {
     ArrowRight, MapPin, Building2, GraduationCap, Star 
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
 // ------------------ 💡 Type Definitions ------------------
 interface AlumniProfile {
     id: string | number;
@@ -214,13 +228,78 @@ useEffect(() => {
                     totalAlumni: 'N/A',
                     upcomingEvents: 'N/A',
                     activeDiscussions: 'N/A',
-                    monthlyDonations: 'Error',
+                    monthlyDonations: 'N/A',
                 });
             }
         };
 
         if (user) fetchStats();
     }, [user]); // Depend on user and run once on mount
+    
+    
+// ------------------ 💡 Connection Handler (Sends Pending Request Notification) ------------------
+const handleConnect = async () => {
+    // Current User (Sender: User 1)
+    const sender = user;
+    // Selected Alumni (Recipient: User 2)
+    const recipient = selectedAlumni; 
+
+    if (!sender || !recipient || typeof recipient.id !== 'string') {
+        console.error("❌ Cannot send request: Sender or Recipient profile/ID is missing or invalid.");
+        alert("Authentication error or profile details incomplete.");
+        return;
+    }
+
+    // The recipient's UID is assumed to be the AlumniProfile.id
+    const recipientUid = recipient.id;
+    const senderUid = sender.uid;
+
+    try {
+        // ----------------------------------------------------
+        // 1. Create Notification Document in Recipient's Firestore
+        // Path: /users/{recipientUid}/notifications/{newNotificationId}
+        // ----------------------------------------------------
+        
+        // Define the subcollection reference on the recipient's user document
+        const recipientNotifCollectionRef = collection(db, "users", recipientUid, "notifications");
+        
+        // Data to be written into the new notification document
+        const notificationData = {
+            type: 'connection',
+            category: 'connections',
+            title: `New Connection Request from ${sender.displayName || 'An Alumni'}`,
+            message: `${sender.displayName || 'An alumni'} would like to connect with you. Accept to finalize connection.`,
+            timestamp: Timestamp.now(), // Use Firestore Timestamp
+            isRead: false,
+            actionable: true,
+            linkToId: senderUid, // CRUCIAL: Sender's UID is stored here
+            avatar: sender.photoURL || null,
+        };
+        
+        // Create the new notification document (Firestore automatically assigns a Document ID)
+        await addDoc(recipientNotifCollectionRef, notificationData);
+
+        // ----------------------------------------------------
+        // 2. Update Sender's Profile (User 1) to track the pending request
+        // This is done to prevent the sender from spamming the request button.
+        // ----------------------------------------------------
+        const senderRef = doc(db, "users", senderUid);
+        await updateDoc(senderRef, {
+            pendingSentRequests: arrayUnion(recipientUid) // Add recipient's UID to pending list
+        });
+
+
+        alert(`Successfully sent a connection request to ${recipient.name}! Awaiting their approval.`);
+        setIsProfileOpen(false); // Close the dialog on success
+
+    } catch (err) {
+        console.error("❌ Error sending connection request:", err);
+        // The error is likely due to non-existent user documents or security rules.
+        alert("Failed to send request. Ensure both user profiles exist and your security rules allow the write.");
+    }
+};
+// ------------------------------------------------------------------------------------------
+
 
     // 💡 STATS ARRAY USES LIVE STATE
     const stats = [
@@ -236,20 +315,13 @@ useEffect(() => {
     };
 
     if (!user) return <p className="text-center mt-20">Checking authentication...</p>;
-    if (isDataLoading) return <p className="text-center mt-20 text-lg text-primary">Loading dashboard data...</p>;
+    
 
+    
     // ------------------ 💡 Render ------------------
     return (
         <div className="min-h-screen p-6">
             <div className="max-w-7xl mx-auto space-y-8">
-
-                {/* Top Bar */}
-                <div className="flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">
-                        Logged in as <span className="text-primary">{user.email}</span>
-                    </h2>
-                    <Button variant="outline" onClick={handleLogout}>Logout</Button>
-                </div>
 
                 {/* Hero Section */}
                 <div className="text-center space-y-4 animate-fade-in">
@@ -326,7 +398,7 @@ useEffect(() => {
                                         <Button variant="ghost" size="sm">View</Button>
                                     </div>
                                 ))}
-                                <Button variant="outline" className="w-full" onClick={() => navigate("/recent-alumnis")}>View All Alumni</Button>
+                                <Button variant="outline" className="w-full" onClick={() => navigate("/directory")}>View All Alumni</Button>
                             </CardContent>
                         </Card>
                     </div>
@@ -418,11 +490,10 @@ useEffect(() => {
                                 </div>
                             </div>
                             <div className="flex justify-end space-x-2">
-                                <Button variant="outline" className="bg-gradient-primary hover:opacity-90"> 
-                            Connect
-                        </Button>
-                                <Button variant="outline" onClick={() => setIsProfileOpen(false)}>Close</Button>
-                            </div>
+                                <Button variant="outline" className="bg-gradient-primary hover:opacity-90" onClick={handleConnect}> 
+                                    Connect
+                                </Button>
+                                <Button variant="outline" onClick={() => setIsProfileOpen(false)}>Close</Button></div>
                         </DialogContent>
                     </Dialog>
                 )}
