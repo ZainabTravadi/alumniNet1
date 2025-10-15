@@ -363,11 +363,11 @@ const Events = () => {
         <div className="text-center space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold">
             Alumni{" "}
-            <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary via-primary to-primary-foreground bg-clip-text text-transparent">
               Events
             </span>
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
             Stay connected through exciting alumni meetups, workshops, and
             conferences.
           </p>

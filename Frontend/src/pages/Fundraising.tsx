@@ -195,13 +195,13 @@ const Fundraising = () => {
     };
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(amount);
-    };
+    return new Intl.NumberFormat('en-IN', { // 'en-IN' locale for Indian Rupee
+        style: 'currency',
+        currency: 'INR', // INR currency code
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount).replace('₹', '₹'); // Ensure the symbol is present
+};
 
     const getCategoryColor = (category: string) => {
         const colors = {
@@ -250,12 +250,18 @@ const Fundraising = () => {
                         {/* Quick Amount Buttons */}
                         <div className="grid grid-cols-5 gap-2">
                             {[25, 50, 100, 250, 500].map((amt) => (
-                                <Button key={amt} variant={donationAmount === amt.toString() ? "default" : "outline"} onClick={() => setDonationAmount(amt.toString())} className="text-sm">${amt}</Button>
+                                 <Button 
+    key={amt} 
+    variant={donationAmount === amt.toString() ? "default" : "outline"} 
+    onClick={() => setDonationAmount(amt.toString())} 
+    className="text-sm">
+    ₹{amt}
+</Button>
                             ))}
                         </div>
                         {/* Custom Amount */}
                         <div className="space-y-2">
-                            <Label htmlFor="custom-amount">Custom Amount (INR/USD)</Label>
+                            <Label htmlFor="custom-amount">Custom Amount (₹)</Label>
                             <div className="relative">
                                 <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input id="custom-amount" type="number" placeholder="Enter amount (e.g., 500)" value={donationAmount} onChange={(e) => setDonationAmount(e.target.value)} className="pl-10" />
@@ -379,7 +385,7 @@ const Fundraising = () => {
                     <p className="text-xl text-muted-foreground max-w-2xl mx-auto">Support your alma mater's future by contributing to meaningful campaigns that make a lasting impact.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-slide-up">
-                    <Card className="glass-card"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">Total Raised</p><p className="text-3xl font-bold">{formatCurrency(campaigns.reduce((sum, campaign) => sum + campaign.raised, 0))}</p></div><DollarSign className="h-8 w-8 text-green-500" /></div></CardContent></Card>
+                    <Card className="glass-card"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">Total Raised</p><p className="text-3xl font-bold">{formatCurrency(campaigns.reduce((sum, campaign) => sum + campaign.raised, 0))}</p></div><IndianRupee className="h-8 w-8 text-green-500" /></div></CardContent></Card>
                     <Card className="glass-card"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">Active Campaigns</p><p className="text-3xl font-bold">{campaigns.length}</p></div><Target className="h-8 w-8 text-primary" /></div></CardContent></Card>
                     <Card className="glass-card"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">Total Donors</p><p className="text-3xl font-bold">{campaigns.reduce((sum, campaign) => sum + campaign.donors, 0)}</p></div><Users className="h-8 w-8 text-blue-500" /></div></CardContent></Card>
                     <Card className="glass-card"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">Your Contributions</p><p className="text-3xl font-bold">{formatCurrency(myDonations.reduce((sum, donation) => sum + donation.amount, 0))}</p></div><Heart className="h-8 w-8 text-red-500" /></div></CardContent></Card>

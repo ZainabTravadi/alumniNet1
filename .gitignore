@@ -1,0 +1,40 @@
+# ----------------------------------------
+# General Node/Build Artifacts
+# ----------------------------------------
+/node_modules
+/dist
+/build
+.DS_Store
+
+# ----------------------------------------
+# Sensitive Credentials (Service Account Keys & .env files)
+# ----------------------------------------
+# 🚨 CRITICAL: Firebase Admin SDK Service Account Key
+/Backend/alumninet-16d17-firebase-adminsdk-fbsvc-b88ad343a6.json
+
+# ----------------------------------------
+# Sensitive Environment Variables
+# ----------------------------------------
+# Ignore the environment file that contains API keys and secrets
+/.env
+
+# Ignore the Backend-specific .env file
+/Backend/.env
+
+# ----------------------------------------
+# Firebase Configuration Files
+# ----------------------------------------
+# These files contain Firebase API keys and credentials.
+# They are being ignored globally to prevent accidental commitment.
+
+# Top-level firebase.ts
+/firebase.ts
+
+# Frontend directory specific file
+/Frontend/src/firebase.ts
+
+# Dashboard directory specific file
+/Dashboard/src/firebase.ts
+
+# Note: The 'Backend' folder likely doesn't have a firebase.ts, 
+# but if it did, it would be added similarly.

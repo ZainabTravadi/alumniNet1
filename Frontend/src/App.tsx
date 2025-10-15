@@ -18,7 +18,6 @@ import { AuthCard } from "./components/auth/AuthCard";
 import RecentAlumniPage from "./pages/RecentAlumni";
 import ChatPage from "./pages/ChatPage"; // Chat Page
 import { useState, useEffect } from "react";
-import FloatingRocket from "./components/ui/FloatingRocket";
 import EventDetailPage from "./pages/EventDetailPage";
 import Settings from "./pages/Settings";
 import DiscussionPage from "./pages/DiscussionPage";
@@ -86,8 +85,7 @@ const App = () => {
             </Routes>
           </div>
 
-          {/* Floating rocket stays global */}
-          <FloatingRocket />
+          
         </div>
       </TooltipProvider>
     </QueryClientProvider>

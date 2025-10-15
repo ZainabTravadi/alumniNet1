@@ -97,7 +97,7 @@ export const AuthCard = () => {
             </p>
             <div className="flex items-center gap-2 text-primary-foreground/70 mt-2">
               <Users className="w-5 h-5" />
-              <span className="text-sm font-medium">10,000+ Alumni Connected</span>
+              <span className="text-sm font-medium">Many Alumni Connected</span>
             </div>
           </div>
 

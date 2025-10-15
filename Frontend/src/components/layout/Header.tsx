@@ -12,7 +12,7 @@ import {
   Calendar, 
   MessageSquare, 
   BookOpen, 
-  DollarSign,
+  IndianRupee,
   Settings,
   User,
   MessageCircle
@@ -49,7 +49,7 @@ const Header = () => {
     { name: 'Events', href: '/events', icon: Calendar },
     { name: 'Forums', href: '/forums', icon: MessageSquare },
     { name: 'Mentorship', href: '/mentorship', icon: BookOpen },
-    { name: 'Fundraising', href: '/fundraising', icon: DollarSign },
+    { name: 'Fundraising', href: '/fundraising', icon: IndianRupee },
   ];
 
   // 🔹 Listen for authenticated user and fetch Firestore profile
