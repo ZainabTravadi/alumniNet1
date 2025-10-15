@@ -15,7 +15,7 @@ AlumniNet allows students and alumni to connect, share experiences through Chat,
 
 * 🟣 Personalized Profile with avatar, bio, skills, and achievements
 * 🟣 Event registration and participation tracking
-* 🟣 Job postings and internship opportunities
+* 🟣 Job postings and internship opportunities using Forums
 * 🟣 Messaging and alumni connection system
 * 🟣 Activity feed and post sharing
 * 🟣 Modern dashboard with analytics and upcoming events
@@ -32,7 +32,9 @@ AlumniNet allows students and alumni to connect, share experiences through Chat,
 💜 **Tech Stack**
 
 🟪 **Frontend:** React-Vite + TypeScript + TailwindCSS + ShadCN/UI
+
 🟪 **Backend:** Python + Flask(APIs) + Firebase (Firestore + Auth)
+
 🟪 **Database:** Firestore (NoSQL structure)
 
 
