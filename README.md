@@ -38,6 +38,7 @@ AlumniNet allows students and alumni to connect, share experiences through Chat,
 🟪 **Database:** Firestore (NoSQL structure)
 
 
+
 💜 **Setup Instructions**
 
 1️⃣ Clone this repository
