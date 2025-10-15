@@ -34,8 +34,7 @@ const navigationItems = {
         { icon: Bell, label: 'Notifications', href: '/notifications' },
     ],
     superadmin: [
-        { icon: Home, label: 'Dashboard', href: '/' }, // Removed 'active: true'
-        { icon: Shield, label: 'Role Management', href: '/roles' },
+        { icon: Home, label: 'Dashboard', href: '/dashboard' }, // Removed 'active: true'
         { icon: Users, label: 'User Management', href: '/users' },
         { icon: Calendar, label: 'Events', href: '/events' },
         { icon: DollarSign, label: 'Fundraising', href: '/fundraising' },

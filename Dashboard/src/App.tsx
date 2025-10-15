@@ -8,12 +8,13 @@ import AdminLayout from "./components/AdminLayout";
 
 import Index from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
-import RoleManager from "./pages/RoleMangement";
+
 import UserControlPanel from "./pages/UserManagement";
 import EventsManager from "./pages/Events";
 import FundManager from "./pages/FundraisingManagement";
 import NotificationsManager from "./pages/NotificationsManager";
 import AdminSettings from "./pages/Settings";
+import { AuthCard } from "./components/auth/AuthCard"; // Auth component
 
 const queryClient = new QueryClient();
 
@@ -26,7 +27,10 @@ const App = () => (
         <Routes>
           
           {/* 💡 FIX: Keep the root route (/) separate for a no-navbar landing page */}
-          <Route path="/" element={<Index />} />
+          {/* Authentication */}
+              <Route path="/" element={<AuthCard />} />
+              <Route path="/auth" element={<AuthCard />} />
+              <Route path="/dashboard" element={<Index />} />
           
           {/* PERSISTENT LAYOUT: All child routes below inherit the sidebar.
              We use a wrapper route (e.g., /admin) or an asterisk path (*) 
@@ -38,7 +42,7 @@ const App = () => (
           <Route element={<AdminLayout />}>
             
             {/* These routes will now load *with* the Sidebar */}
-            <Route path="/roles" element={<RoleManager />} />
+            
             <Route path="/users" element={<UserControlPanel />} />
             <Route path="/events" element={<EventsManager />} />
             <Route path="/fundraising" element={<FundManager />} />

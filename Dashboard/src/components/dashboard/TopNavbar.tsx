@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Bell, Moon, Sun, User, Calendar, MessageSquare, Briefcase, GraduationCap } from 'lucide-react'; 
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, Bell, Moon, Sun, User, Calendar, MessageSquare } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -7,10 +9,9 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useNavigate } from 'react-router-dom'; // 💡 Import useNavigate
 
 // ------------------ 💡 INTERFACE DEFINITIONS ------------------
 interface SearchResult {
@@ -37,10 +38,24 @@ const SEARCH_API = import.meta.env.VITE_API_GLOBAL_SEARCH || 'http://localhost:5
 
 
 export function TopNavbar({ sidebarCollapsed, darkMode, onToggleDarkMode }: TopNavbarProps) {
+    // 💡 Initialize useNavigate hook
+    const navigate = useNavigate();
+
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showResultsDropdown, setShowResultsDropdown] = useState(false); // Manages dropdown visibility
+
+    // ------------------ 💡 NAVIGATION HANDLERS ------------------
+    const handleSignOut = () => {
+        // Implement Firebase sign-out logic here
+        navigate('/');
+    };
+
+    // 💡 NEW HANDLER: Navigates to the notifications route
+    const handleViewNotifications = () => {
+        navigate('/notifications');
+    };
 
     // ------------------ 💡 DEBOUNCE AND FETCH LOGIC ------------------
     useEffect(() => {
@@ -156,20 +171,23 @@ export function TopNavbar({ sidebarCollapsed, darkMode, onToggleDarkMode }: TopN
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-4">
-                    {/* Dark Mode Toggle - Icon logic ensures proper display for white/dark background */}
+                    {/* Dark Mode Toggle */}
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={onToggleDarkMode}
                         className="hover:glow-effect"
                     >
-                        {/* 💡 If darkMode is TRUE (dark theme), show SUN (to switch to light/white theme) */}
-                        {/* 💡 If darkMode is FALSE (light theme/white background), show MOON (to switch to dark theme) */}
                         {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                     </Button>
 
-                    {/* Notifications */}
-                    <Button variant="ghost" size="icon" className="relative hover:glow-effect">
+                    {/* Notifications Button (FIXED) */}
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="relative hover:glow-effect"
+                        onClick={handleViewNotifications} // 💡 Navigation attached here
+                    >
                         <Bell className="h-5 w-5" />
                         <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-destructive flex items-center justify-center">
                             <span className="text-[8px] text-white font-bold">3</span>
@@ -185,18 +203,17 @@ export function TopNavbar({ sidebarCollapsed, darkMode, onToggleDarkMode }: TopN
                                 </div>
                                 <div className="text-left hidden md:block">
                                     <p className="text-sm font-medium">Admin User</p>
-                                    <p className="text-xs text-muted-foreground">admin@alumninet.com</p>
+                                    <p className="text-xs text-muted-foreground">admin@gmail.com</p>
                                 </div>
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 gradient-card">
-                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-                            <DropdownMenuItem>Preferences</DropdownMenuItem>
-                            <DropdownMenuItem>Activity Log</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">Sign Out</DropdownMenuItem>
+                            <DropdownMenuItem 
+                                className="text-destructive cursor-pointer"
+                                onClick={handleSignOut}
+                            >
+                                Sign Out
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
