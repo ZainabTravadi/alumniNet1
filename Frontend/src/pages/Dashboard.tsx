@@ -1,505 +1,363 @@
 // =================================================================================
-// DASHBOARD.tsx (Component where the "Connect" button is pressed)
+// DASHBOARD.tsx
 // =================================================================================
 
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
-// 💡 CONFIRMED FIRESTORE IMPORTS
-import { 
-    collection, 
-    getDocs, 
-    query, 
-    where, 
-    Timestamp, 
-    doc, 
-    updateDoc, 
-    arrayUnion,
-    addDoc // <-- ADDED for creating the new notification document
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  Timestamp,
+  doc,
+  updateDoc,
+  arrayUnion,
+  addDoc,
 } from "firebase/firestore";
-import { auth, db } from "@/firebase"; 
 
-// UI Imports (omitted for brevity, assume they are correct)
-// ...
-import { 
-    Card, CardContent, CardDescription, CardHeader, CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { 
-    Users, Calendar, MessageSquare, TrendingUp, 
-    ArrowRight, MapPin, Building2, GraduationCap, Star 
-} from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-// ------------------ 💡 Type Definitions ------------------
+import { auth, db } from "@/firebase";
+
+// UI
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Users,
+  Calendar,
+  MessageSquare,
+  TrendingUp,
+  ArrowRight,
+  MapPin,
+  Building2,
+  GraduationCap,
+  Star,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+// =================================================================================
+// Types
+// =================================================================================
+
 interface AlumniProfile {
-    id: string | number;
-    name: string;
-    title: string;
-    company: string;
-    batch: string;
-    department: string;
-    location: string;
-    avatar: string;
-    rating: number;
-    mentees: number;
-    expertise: string[];
-    bio: string;
-    availability: string;
-    responseTime: string;
-    languages: string[];
+  id: string;
+  name: string;
+  title: string;
+  company: string;
+  batch: string;
+  department: string;
+  location: string;
+  avatar: string;
+  rating: number;
+  mentees: number;
+  expertise: string[];
+  bio: string;
+  availability: string;
+  responseTime: string;
+  languages: string[];
 }
 
-interface Event {
-    title: string;
-    date: string; 
-    location: string;
-    attendees: number;
+interface EventItem {
+  title: string;
+  date: string;
+  location: string;
+  attendees: number;
 }
 
-// ------------------ 💡 Client-Side Date Formatting Utility ------------------
-const formatDate = (dateString: string): string => {
-    if (dateString.includes('Timestamp')) {
-        return "Date Pending Format";
-    }
-    
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            return dateString || "Date N/A"; 
-        }
-        
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    } catch (e) {
-        return dateString;
-    }
+// =================================================================================
+// Utils
+// =================================================================================
+
+const formatDate = (dateString: string) => {
+  const d = new Date(dateString);
+  return isNaN(d.getTime())
+    ? "Date N/A"
+    : d.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
 };
 
-// ------------------ 💡 Fallback Dummy Data ------------------
+// =================================================================================
+// Dummy fallback
+// =================================================================================
+
 const DUMMY_ALUMNI: AlumniProfile[] = [
-    { id: 'dummy-1', name: 'Sarah Chen', title: 'Senior Software Engineer', company: 'Google', batch: '2019', department: 'Computer Science', location: 'San Francisco', avatar: '/placeholder-avatar.jpg', rating: 4.9, mentees: 12, expertise: ['Software Engineering', 'Career Growth', 'Technical Leadership', 'System Design'], bio: 'I have 8+ years of experience in tech, having worked at Google, Facebook, and startups. I love helping fellow alumni navigate their tech careers.', availability: 'Weekends', responseTime: '24 hours', languages: ['English', 'Mandarin'] },
-    { id: 'dummy-2', name: 'Michael Rodriguez', title: 'Product Director', company: 'Tesla', batch: '2020', department: 'Mechanical Eng', location: 'Austin', avatar: '/placeholder-avatar.jpg', rating: 4.8, mentees: 8, expertise: ['Product Management', 'Engineering Leadership', 'Automotive Industry', 'Innovation'], bio: 'Leading product teams in the automotive space. Passionate about clean energy and helping engineers transition to product roles.', availability: 'Evenings', responseTime: '12 hours', languages: ['English', 'Spanish'] },
-    { id: 'dummy-3', name: 'Emma Thompson', title: 'Marketing Director', company: 'Microsoft', batch: '2018', department: 'Business Admin', location: 'Seattle', avatar: '/placeholder-avatar.jpg', rating: 4.9, mentees: 15, expertise: ['Digital Marketing', 'Brand Strategy', 'Leadership', 'B2B Marketing'], bio: 'Leading marketing initiatives for enterprise products. Happy to share insights on marketing strategy and career progression.', availability: 'Flexible', responseTime: '6 hours', languages: ['English'] }
+  {
+    id: "dummy-1",
+    name: "Sarah Chen",
+    title: "Senior Software Engineer",
+    company: "Google",
+    batch: "2019",
+    department: "Computer Science",
+    location: "San Francisco",
+    avatar: "/placeholder-avatar.jpg",
+    rating: 4.9,
+    mentees: 12,
+    expertise: ["System Design", "Career Growth"],
+    bio: "Tech mentor with 8+ years experience.",
+    availability: "Weekends",
+    responseTime: "24 hours",
+    languages: ["English"],
+  },
 ];
 
-const DUMMY_EVENTS: Event[] = [
-    { title: 'Annual Alumni Meetup 2024', date: 'October 25, 2025', location: 'Main Campus', attendees: 245 },
-    { title: 'Tech Talk: AI in Industry', date: 'November 1, 2025', location: 'Virtual Event', attendees: 89 },
-    { title: 'Career Fair 2024', date: 'November 15, 2025', location: 'Convention Center', attendees: 156 },
-    { title: 'Holiday Mixer', date: 'December 20, 2025', location: 'City Ballroom', attendees: 110 },
-    { title: 'Future of Work Panel', date: 'January 10, 2026', location: 'Virtual Event', attendees: 65 },
-    { title: 'Startup Pitch Night', date: 'February 5, 2026', location: 'Innovation Hub', attendees: 92 }
+const DUMMY_EVENTS: EventItem[] = [
+  {
+    title: "Annual Alumni Meetup",
+    date: "2025-10-25",
+    location: "Main Campus",
+    attendees: 245,
+  },
 ];
 
+// =================================================================================
+// Component
+// =================================================================================
 
-// ------------------ 💡 Component ------------------
 const Dashboard = () => {
-    const navigate = useNavigate();
-    const [user, setUser] = useState<User | null>(null);
-    const [selectedAlumni, setSelectedAlumni] = useState<AlumniProfile | null>(null);
-    const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const [recentAlumni, setRecentAlumni] = useState<AlumniProfile[]>([]);
-    const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
-    const [isDataLoading, setIsDataLoading] = useState(true);
+  const navigate = useNavigate();
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/dashboard';
+  // 🔐 Auth
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-    // 💡 STATE FOR LIVE STATS
-    const [liveStats, setLiveStats] = useState({
-        totalAlumni: '...',
-        upcomingEvents: '...',
-        activeDiscussions: '...',
-        monthlyDonations: '...',
-    });
+  // 📦 Data
+  const [recentAlumni, setRecentAlumni] = useState<AlumniProfile[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
+  const [selectedAlumni, setSelectedAlumni] = useState<AlumniProfile | null>(
+    null
+  );
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-    // ------------------ 💡 Auth Guard ------------------
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (!currentUser) navigate("/auth");
-            else setUser(currentUser);
-        });
-        return () => unsubscribe();
-    }, [navigate]);
+  // 📊 Stats
+  const [liveStats, setLiveStats] = useState({
+    totalAlumni: "...",
+    upcomingEvents: "...",
+    activeDiscussions: "...",
+    monthlyDonations: "...",
+  });
 
-    // ------------------ 💡 Data Fetch for Recent Alumni & Events (API) ------------------
-    ;
-useEffect(() => {
-        const fetchData = async () => {
-            if (!user) return;
-            setIsDataLoading(true);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-            try {
-                const [alumniRes, eventsRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/alumni`),
-                    fetch(`${API_BASE_URL}/events`)
-                ]);
-
-                let alumniData: AlumniProfile[] = [];
-                let eventData: Event[] = [];
-
-                if (alumniRes.ok) {
-                    const alumniResult = await alumniRes.json();
-                    alumniData = alumniResult.data || [];
-                }
-                if (eventsRes.ok) {
-                    const eventsResult = await eventsRes.json();
-                    eventData = eventsResult.data || [];
-                }
-
-                setRecentAlumni(alumniData.length ? alumniData : DUMMY_ALUMNI);
-                setUpcomingEvents(eventData.length ? eventData : DUMMY_EVENTS);
-            } catch (err) {
-                console.error("❌ API Error, falling back to dummy data:", err);
-                setRecentAlumni(DUMMY_ALUMNI);
-                setUpcomingEvents(DUMMY_EVENTS);
-            } finally {
-                setIsDataLoading(false);
-            }
-        };
-
-        if (user) fetchData();
-    }, [user, API_BASE_URL])
-    // ------------------ 💡 Data Fetch for Dashboard STATS (Firestore) ------------------
-    useEffect(() => {
-        const fetchStats = async () => {
-            if (!user) return; 
-
-            try {
-                // 1. Total Alumni (Count of 'users' collection - implicitly created by auth)
-                const alumniQuery = query(collection(db, "users"));
-
-                // 2. Upcoming Events (Count of 'events' where date is in the future)
-                const today = new Date();
-                const eventsQuery = query(
-                    collection(db, "events"),
-                    where("date", ">=", Timestamp.fromDate(today))
-                );
-
-                // 3. Active Discussions (Count of 'forum_threads' collection)
-                const threadsQuery = query(collection(db, "forum_threads"));
-                
-                // 4. Total Raised (Sum of 'raised' field in 'fundraising_campaigns')
-                const donationsQuery = query(collection(db, "fundraising_campaigns"));
-                
-                // Execute all queries concurrently
-                const [alumniSnap, eventsSnap, threadsSnap, donationsSnap] = await Promise.all([
-                    getDocs(alumniQuery),
-                    getDocs(eventsQuery),
-                    getDocs(threadsQuery),
-                    getDocs(donationsQuery),
-                ]);
-
-                // Calculate Total Raised
-                let totalRaised = 0;
-                donationsSnap.forEach(doc => {
-                    const data = doc.data();
-                    // Assuming 'raised' field exists and is a number
-                    if (typeof data.raised === 'number') {
-                        totalRaised += data.raised;
-                    }
-                });
-
-                // Helper to format currency for thousands (K)
-                const formatCurrency = (amount: number) => {
-                    if (amount >= 1000) {
-                        // Example: 12500 -> $12.5K
-                        return `₹${(amount / 1000).toFixed(1)}K`; 
-                    }
-                    return amount.toLocaleString('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    });
-                };
-
-                setLiveStats({
-                    totalAlumni: alumniSnap.size.toLocaleString(),
-                    upcomingEvents: eventsSnap.size.toLocaleString(),
-                    activeDiscussions: threadsSnap.size.toLocaleString(),
-                    monthlyDonations: formatCurrency(totalRaised),
-                });
-
-            } catch (err) {
-                console.error("❌ Firestore STATS fetch error:", err);
-                // Fallback to error indicators
-                setLiveStats({
-                    totalAlumni: 'N/A',
-                    upcomingEvents: 'N/A',
-                    activeDiscussions: 'N/A',
-                    monthlyDonations: 'N/A',
-                });
-            }
-        };
-
-        if (user) fetchStats();
-    }, [user]); // Depend on user and run once on mount
-    
-    
-// ------------------ 💡 Connection Handler (Sends Pending Request Notification) ------------------
-const handleConnect = async () => {
-    // Current User (Sender: User 1)
-    const sender = user;
-    // Selected Alumni (Recipient: User 2)
-    const recipient = selectedAlumni; 
-
-    if (!sender || !recipient || typeof recipient.id !== 'string') {
-        console.error("❌ Cannot send request: Sender or Recipient profile/ID is missing or invalid.");
-        alert("Authentication error or profile details incomplete.");
-        return;
-    }
-
-    // The recipient's UID is assumed to be the AlumniProfile.id
-    const recipientUid = recipient.id;
-    const senderUid = sender.uid;
-
-    try {
-        // ----------------------------------------------------
-        // 1. Create Notification Document in Recipient's Firestore
-        // Path: /users/{recipientUid}/notifications/{newNotificationId}
-        // ----------------------------------------------------
-        
-        // Define the subcollection reference on the recipient's user document
-        const recipientNotifCollectionRef = collection(db, "users", recipientUid, "notifications");
-        
-        // Data to be written into the new notification document
-        const notificationData = {
-            type: 'connection',
-            category: 'connections',
-            title: `New Connection Request from ${sender.displayName || 'An Alumni'}`,
-            message: `${sender.displayName || 'An alumni'} would like to connect with you. Accept to finalize connection.`,
-            timestamp: Timestamp.now(), // Use Firestore Timestamp
-            isRead: false,
-            actionable: true,
-            linkToId: senderUid, // CRUCIAL: Sender's UID is stored here
-            avatar: sender.photoURL || null,
-        };
-        
-        // Create the new notification document (Firestore automatically assigns a Document ID)
-        await addDoc(recipientNotifCollectionRef, notificationData);
-
-        // ----------------------------------------------------
-        // 2. Update Sender's Profile (User 1) to track the pending request
-        // This is done to prevent the sender from spamming the request button.
-        // ----------------------------------------------------
-        const senderRef = doc(db, "users", senderUid);
-        await updateDoc(senderRef, {
-            pendingSentRequests: arrayUnion(recipientUid) // Add recipient's UID to pending list
-        });
-
-
-        alert(`Successfully sent a connection request to ${recipient.name}! Awaiting their approval.`);
-        setIsProfileOpen(false); // Close the dialog on success
-
-    } catch (err) {
-        console.error("❌ Error sending connection request:", err);
-        // The error is likely due to non-existent user documents or security rules.
-        alert("Failed to send request. Ensure both user profiles exist and your security rules allow the write.");
-    }
-};
-// ------------------------------------------------------------------------------------------
-
-
-    // 💡 STATS ARRAY USES LIVE STATE
-    const stats = [
-        { label: 'Total Alumni', value: liveStats.totalAlumni, icon: Users, color: 'text-blue-500' },
-        { label: 'Upcoming Events', value: liveStats.upcomingEvents, icon: Calendar, color: 'text-green-500' },
-        { label: 'Active Discussions', value: liveStats.activeDiscussions, icon: MessageSquare, color: 'text-purple-500' },
-        { label: 'Total Raised', value: liveStats.monthlyDonations, icon: TrendingUp, color: 'text-orange-500' }
-    ];
-
-    const handleLogout = async () => {
-        await signOut(auth);
+  // =================================================================================
+  // Auth Guard (FIXED)
+  // =================================================================================
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        setUser(null);
         navigate("/auth");
+      } else {
+        setUser(currentUser);
+      }
+      setAuthLoading(false);
+    });
+    return () => unsub();
+  }, [navigate]);
+
+  // =================================================================================
+  // Backend Data
+  // =================================================================================
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchDashboardData = async () => {
+      try {
+        const [alumniRes, eventsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/dashboard/alumni`),
+          fetch(`${API_BASE_URL}/api/dashboard/events`),
+        ]);
+
+        const alumniJson = alumniRes.ok ? await alumniRes.json() : null;
+        const eventsJson = eventsRes.ok ? await eventsRes.json() : null;
+
+        setRecentAlumni(alumniJson?.data?.length ? alumniJson.data : DUMMY_ALUMNI);
+        setUpcomingEvents(eventsJson?.data?.length ? eventsJson.data : DUMMY_EVENTS);
+      } catch (err) {
+        console.error("❌ API failed, using fallback", err);
+        setRecentAlumni(DUMMY_ALUMNI);
+        setUpcomingEvents(DUMMY_EVENTS);
+      }
     };
 
-    if (!user) return <p className="text-center mt-20">Checking authentication...</p>;
-    
+    fetchDashboardData();
+  }, [user, API_BASE_URL]);
 
-    
-    // ------------------ 💡 Render ------------------
-    return (
-        <div className="min-h-screen p-6">
-            <div className="max-w-7xl mx-auto space-y-8">
+  // =================================================================================
+  // Firestore Stats
+  // =================================================================================
+  useEffect(() => {
+    if (!user) return;
 
-                {/* Hero Section */}
-                <div className="text-center space-y-4 animate-fade-in">
-                    <h1 className="text-4xl md:text-6xl font-bold">
-                        Welcome to{' '}
-                        <span className="bg-gradient-to-r from-primary via-primary to-primary-foreground bg-clip-text text-transparent">
-                            AlumniNet
-                        </span>
-                    </h1>
-                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                        Connect, collaborate, and grow with your alumni network. Stay updated with events, 
-                        find mentors, and contribute to your alma mater's future.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <Button size="lg" className="bg-gradient-primary hover:opacity-90" onClick={() => navigate("/directory")}> 
-                            Explore Directory
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                        <Button size="lg" variant="outline" onClick={() => navigate("/profile")}> 
-                            Update Profile
-                        </Button>
-                    </div>
+    const fetchStats = async () => {
+      try {
+        const [usersSnap, eventsSnap, threadsSnap, fundsSnap] =
+          await Promise.all([
+            getDocs(collection(db, "users")),
+            getDocs(
+              query(
+                collection(db, "events"),
+                where("date", ">=", Timestamp.fromDate(new Date()))
+              )
+            ),
+            getDocs(collection(db, "forum_threads")),
+            getDocs(collection(db, "fundraising_campaigns")),
+          ]);
+
+        let raised = 0;
+        fundsSnap.forEach((d) => {
+          if (typeof d.data().raised === "number") {
+            raised += d.data().raised;
+          }
+        });
+
+        setLiveStats({
+          totalAlumni: usersSnap.size.toString(),
+          upcomingEvents: eventsSnap.size.toString(),
+          activeDiscussions: threadsSnap.size.toString(),
+          monthlyDonations: `₹${(raised / 1000).toFixed(1)}K`,
+        });
+      } catch (e) {
+        console.error("❌ Stats fetch failed", e);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
+
+  // =================================================================================
+  // Connect Request
+  // =================================================================================
+  const handleConnect = async () => {
+    if (!user || !selectedAlumni) return;
+
+    try {
+      await addDoc(
+        collection(db, "users", selectedAlumni.id, "notifications"),
+        {
+          type: "connection",
+          title: `New connection from ${user.displayName || "Alumni"}`,
+          message: "Would like to connect with you.",
+          timestamp: Timestamp.now(),
+          isRead: false,
+          linkToId: user.uid,
+          avatar: user.photoURL,
+        }
+      );
+
+      await updateDoc(doc(db, "users", user.uid), {
+        pendingSentRequests: arrayUnion(selectedAlumni.id),
+      });
+
+      alert("Connection request sent");
+      setIsProfileOpen(false);
+    } catch (e) {
+      console.error("❌ Connection failed", e);
+      alert("Failed to send request");
+    }
+  };
+
+  // =================================================================================
+  // Guards
+  // =================================================================================
+  if (authLoading) {
+    return <p className="text-center mt-20">Checking authentication...</p>;
+  }
+
+  if (!user) return null;
+
+  // =================================================================================
+  // Render
+  // =================================================================================
+  return (
+    <div className="min-h-screen p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <h1 className="text-4xl font-bold text-center">
+          Welcome to <span className="text-primary">AlumniNet</span>
+        </h1>
+
+        {/* Stats */}
+        <div className="grid md:grid-cols-4 gap-6">
+          {[
+            { label: "Total Alumni", value: liveStats.totalAlumni, icon: Users },
+            { label: "Events", value: liveStats.upcomingEvents, icon: Calendar },
+            { label: "Discussions", value: liveStats.activeDiscussions, icon: MessageSquare },
+            { label: "Raised", value: liveStats.monthlyDonations, icon: TrendingUp },
+          ].map((s) => (
+            <Card key={s.label}>
+              <CardContent className="p-6 flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-muted-foreground">{s.label}</p>
+                  <p className="text-2xl font-bold">{s.value}</p>
                 </div>
-
-                {/* Stats Section (Uses liveStats from Firestore) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
-                    {stats.map((stat) => (
-                        <Card key={stat.label} className="glass-card hover-glow">
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                                        <p className="text-3xl font-bold">{stat.value}</p> 
-                                    </div>
-                                    <stat.icon className={`h-8 w-8 ${stat.color}`} />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-
-                <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Recent Alumni (Limited to 5, navigates to /recent-alumnis) */}
-                    <div className="lg:col-span-2">
-                        <Card className="glass-card animate-scale-in">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Users className="h-5 w-5 text-primary" />
-                                    Recently Joined Alumni
-                                </CardTitle>
-                                <CardDescription>Welcome our newest community members</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {recentAlumni.slice(0, 5).map((alumni) => (
-                                    <div key={alumni.id} className="flex items-center space-x-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => {
-                                        setSelectedAlumni(alumni);
-                                        setIsProfileOpen(true);
-                                    }}>
-                                        <Avatar>
-                                            <AvatarImage src={alumni.avatar} />
-                                            <AvatarFallback>{alumni.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1 space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="font-medium">{alumni.name}</h4>
-                                                <Badge variant="secondary">{alumni.batch}</Badge>
-                                            </div>
-                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" />{alumni.department}</span>
-                                                <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{alumni.company}</span>
-                                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{alumni.location}</span>
-                                            </div>
-                                        </div>
-                                        <Button variant="ghost" size="sm">View</Button>
-                                    </div>
-                                ))}
-                                <Button variant="outline" className="w-full" onClick={() => navigate("/directory")}>View All Alumni</Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Events (Limited to 5, navigates to /events) */}
-                    <div>
-                        <Card className="glass-card animate-scale-in">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Calendar className="h-5 w-5 text-primary" />
-                                    Upcoming Events
-                                </CardTitle>
-                                <CardDescription>Don't miss these exciting events</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {upcomingEvents.slice(0, 5).map((event, index) => (
-                                    <div key={index} className="space-y-2 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                        <h4 className="font-medium text-sm">{event.title}</h4>
-                                        <div className="text-xs text-muted-foreground space-y-1">
-                                            <div>{formatDate(event.date)}</div> 
-                                            <div className="flex items-center justify-between">
-                                                <span>{event.location}</span>
-                                                <Badge variant="outline" className="text-xs">
-                                                    {event.attendees} attending
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                                <Button variant="outline" className="w-full" size="sm" onClick={() => navigate("/events")}>View All Events</Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-                
-                {/* Alumni Dialog */}
-                {selectedAlumni && (
-                    <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                        <DialogContent className="w-full sm:max-w-xl max-h-[85vh] overflow-y-auto">
-                            <DialogHeader>
-                                <div className="flex items-start space-x-4">
-                                    <Avatar className="h-24 w-24 border-2 border-primary">
-                                        <AvatarImage src={selectedAlumni.avatar} />
-                                        <AvatarFallback className="text-3xl">
-                                            {selectedAlumni.name.split(' ').map(n => n[0]).join('')}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="space-y-1">
-                                        <DialogTitle className="text-2xl font-bold">{selectedAlumni.name}</DialogTitle>
-                                        <DialogDescription className="text-md">
-                                            {selectedAlumni.title} at <span className="font-semibold text-primary">{selectedAlumni.company}</span>
-                                        </DialogDescription>
-                                        <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2">
-                                            <span className="flex items-center gap-1.5">
-                                                <GraduationCap className="h-4 w-4" />
-                                                Batch of {selectedAlumni.batch}
-                                            </span>
-                                            <span className="flex items-center gap-1.5">
-                                                <MapPin className="h-4 w-4" />
-                                                {selectedAlumni.location}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </DialogHeader>
-
-                            <div className="py-4 space-y-6">
-                                <div>
-                                    <h3 className="text-lg font-semibold mb-2">Bio</h3>
-                                    <p className="text-muted-foreground">{selectedAlumni.bio}</p>
-                                </div>
-
-                                <div>
-                                    <h3 className="text-lg font-semibold mb-2">Expertise</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedAlumni.expertise.map((skill) => (
-                                            <Badge key={skill} variant="secondary">{skill}</Badge>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                    <div><h4 className="font-semibold">Department</h4><p className="text-muted-foreground">{selectedAlumni.department}</p></div>
-                                    <div><h4 className="font-semibold">Rating</h4><div className="flex items-center gap-1"><Star className="h-5 w-5 text-yellow-500 fill-current" /><span className="font-medium text-muted-foreground">{selectedAlumni.rating}</span></div></div>
-                                    <div><h4 className="font-semibold">Mentees</h4><p className="text-muted-foreground">{selectedAlumni.mentees}</p></div>
-                                    <div><h4 className="font-semibold">Availability</h4><p className="text-muted-foreground">{selectedAlumni.availability}</p></div>
-                                    <div><h4 className="font-semibold">Response Time</h4><p className="text-muted-foreground">{selectedAlumni.responseTime}</p></div>
-                                    <div><h4 className="font-semibold">Languages</h4><p className="text-muted-foreground">{selectedAlumni.languages.join(', ')}</p></div>
-                                </div>
-                            </div>
-                            <div className="flex justify-end space-x-2">
-                                <Button variant="outline" className="bg-gradient-primary hover:opacity-90" onClick={handleConnect}> 
-                                    Connect
-                                </Button>
-                                <Button variant="outline" onClick={() => setIsProfileOpen(false)}>Close</Button></div>
-                        </DialogContent>
-                    </Dialog>
-                )}
-            </div>
+                <s.icon className="h-8 w-8 text-primary" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
-    );
+
+        {/* Alumni */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recently Joined Alumni</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentAlumni.map((a) => (
+              <div
+                key={a.id}
+                className="flex items-center gap-4 p-3 cursor-pointer"
+                onClick={() => {
+                  setSelectedAlumni(a);
+                  setIsProfileOpen(true);
+                }}
+              >
+                <Avatar>
+                  <AvatarImage src={a.avatar} />
+                  <AvatarFallback>{a.name[0]}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{a.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {a.company}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Dialog */}
+      {selectedAlumni && (
+        <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+          <DialogContent>
+            <DialogHeader>
+              Perfected Auth & Implemented Basic UI of all Admin Dashboard Pages
+              <DialogTitle>{selectedAlumni.name}</DialogTitle>
+              <DialogDescription>{selectedAlumni.title}</DialogDescription>
+            </DialogHeader>
+            <Button onClick={handleConnect}>Connect</Button>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
 };
 
 export default Dashboard;

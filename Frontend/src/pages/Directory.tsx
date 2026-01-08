@@ -68,7 +68,7 @@ const Directory = () => {
         photoURL: string;    // From Firestore /users collection
     }) | null>(null);
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL_DIRECTORY || 'http://localhost:5000/api/directory/alumni';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -110,7 +110,7 @@ const Directory = () => {
         const fetchAlumni = async () => {
             try {
                 // Ensure the fetch URL is correct based on your Python route fix
-                const response = await fetch(API_BASE_URL); 
+                const response = await fetch(`${API_BASE_URL}/api/directory/alumni`);
                 const result = await response.json();
 
                 if (response.ok && result.data) {
