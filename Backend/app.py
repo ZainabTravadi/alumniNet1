@@ -11,18 +11,21 @@ load_dotenv()
 
 # --- 1. FIREBASE ADMIN SDK INITIALIZATION ---
 
-SERVICE_ACCOUNT_KEY_PATH = os.getenv("SERVICE_ACCOUNT_KEY_PATH")
+firebase_cred = {
+    "type": "service_account",
+    "project_id": os.environ.get("FIREBASE_PROJECT_ID"),
+    "client_email": os.environ.get("FIREBASE_CLIENT_EMAIL"),
+    "private_key": os.environ.get("FIREBASE_PRIVATE_KEY").replace("\\n", "\n"),
+}
 
-if not SERVICE_ACCOUNT_KEY_PATH:
-    raise Exception("FATAL ERROR: SERVICE_ACCOUNT_KEY_PATH not set in .env or environment.")
+if not firebase_cred["project_id"] or not firebase_cred["client_email"] or not firebase_cred["private_key"]:
+    raise Exception("FATAL ERROR: Firebase credentials are not fully set in environment variables.")
 
-try:
-    cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH) 
-    initialize_app(cred)
-except FileNotFoundError:
-    raise Exception(f"FATAL ERROR: Service account key not found at {SERVICE_ACCOUNT_KEY_PATH}. Check the path.")
+cred = credentials.Certificate(firebase_cred)
+initialize_app(cred)
 
-db = admin_firestore.client() 
+db = admin_firestore.client()
+
 
 # --- 2. FLASK APP SETUP ---
 
